@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1117">
+  <title>AI Tugas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app" id="app">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-logo">AI</div>
+          <div class="brand-info">
+            <strong>AI Tugas</strong>
+            <span>Asisten belajar</span>
+          </div>
+        </div>
+
+        <button type="button" class="icon-button sidebar-close" id="sidebarClose" aria-label="Tutup menu">×</button>
+      </div>
+
+      <button type="button" class="new-chat" id="newChatButton">
+        <span class="new-chat-icon">＋</span>
+        <span>Chat Baru</span>
+      </button>
+
+      <div class="sidebar-search">
+        <input type="search" id="historySearch" placeholder="Cari riwayat..." autocomplete="off">
+      </div>
+
+      <div class="history-area">
+        <div class="sidebar-title">Riwayat Chat</div>
+        <div class="history-list" id="historyList"></div>
+        <div class="history-empty" id="historyEmpty">Belum ada riwayat</div>
+      </div>
+
+      <div class="sidebar-bottom">
+        <button type="button" class="sidebar-button" id="clearHistoryButton">
+          <span>🗑️</span>
+          <span>Hapus Riwayat</span>
+        </button>
+
+        <button type="button" class="sidebar-button" id="settingsButton">
+          <span>⚙️</span>
+          <span>Pengaturan</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="content">
+      <header class="header">
+        <button type="button" class="menu-button" id="menuButton" aria-label="Menu">☰</button>
+
+        <div class="header-info">
+          <strong>AI Tugas</strong>
+          <span>Asisten untuk mengerjakan tugas</span>
+        </div>
+
+        <button type="button" class="header-new" id="headerNewChat" aria-label="Chat baru">＋</button>
+      </header>
+
+      <main class="main" id="main">
+        <section class="welcome" id="welcome">
+          <div class="welcome-logo">✦</div>
+          <h1>Mau mengerjakan tugas apa?</h1>
+          <p>
+            Kirim soal kamu dan dapatkan penjelasan langkah demi langkah dengan bahasa yang mudah dipahami.
+          </p>
+
+          <div class="mode-container">
+            <button type="button" class="mode-button active" data-mode="lengkap">Lengkap</button>
+            <button type="button" class="mode-button" data-mode="singkat">Singkat</button>
+            <button type="button" class="mode-button" data-mode="langkah">Langkah</button>
+          </div>
+
+          <div class="examples">
+            <button type="button" class="example-card" data-example="Selesaikan persamaan x² - 5x + 6 = 0 dan jelaskan langkahnya.">
+              <span class="example-symbol">𝑥²</span>
+              <span class="example-text">
+                <strong>Matematika</strong>
+                <small>Persamaan dan perhitungan</small>
+              </span>
+            </button>
+
+            <button type="button" class="example-card" data-example="Jelaskan proses fotosintesis secara sederhana dan mudah dipahami.">
+              <span class="example-symbol">🧪</span>
+              <span class="example-text">
+                <strong>IPA</strong>
+                <small>Penjelasan konsep</small>
+              </span>
+            </button>
+
+            <button type="button" class="example-card" data-example="Buat rangkuman tentang sejarah kemerdekaan Indonesia.">
+              <span class="example-symbol">📚</span>
+              <span class="example-text">
+                <strong>Sejarah</strong>
+                <small>Rangkuman materi</small>
+              </span>
+            </button>
+
+            <button type="button" class="example-card" data-example="Buat contoh paragraf argumentasi tentang pentingnya pendidikan.">
+              <span class="example-symbol">✎</span>
+              <span class="example-text">
+                <strong>Bahasa</strong>
+                <small>Menulis dan menyusun</small>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <section class="chat" id="chatMessages" aria-live="polite"></section>
+
+        <div class="typing" id="typingIndicator" hidden>
+          <div class="typing-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span>AI sedang berpikir...</span>
+        </div>
+
+        <section class="composer-area" id="inputArea">
+          <div class="attachment" id="imageAttachment" hidden>
+            <div class="attachment-image">
+              <img id="previewImage" src="" alt="Gambar yang dipilih">
+              <button type="button" id="removeImage" aria-label="Hapus gambar">×</button>
+            </div>
+          </div>
+
+          <div class="attachment-file" id="fileAttachment" hidden>
+            <span class="file-icon">📎</span>
+            <span class="file-name" id="fileName">File</span>
+            <button type="button" id="removeFile" aria-label="Hapus file">×</button>
+          </div>
+
+          <div class="composer">
+            <button type="button" class="composer-button" id="attachButton" aria-label="Lampiran">＋</button>
+
+            <textarea
+              id="questionInput"
+              class="question-input"
+              rows="1"
+              placeholder="Tulis soal kamu..."
+              spellcheck="true"
+              autocomplete="off"
+              autocorrect="on"
+              autocapitalize="sentences"></textarea>
+
+            <button type="button" class="send-button" id="sendButton" aria-label="Kirim">↑</button>
+            <button type="button" class="stop-button" id="stopButton" aria-label="Berhenti" hidden>■</button>
+          </div>
+
+          <div class="composer-info">
+            <span>AI dapat membuat kesalahan. Periksa kembali jawaban penting.</span>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="attachment-menu" id="attachmentMenu" hidden>
+    <button type="button" id="chooseImage">🖼️ Gambar</button>
+    <button type="button" id="chooseFile">📎 File</button>
+  </div>
+
+  <input type="file" id="imageInput" accept="image/*" hidden>
+  <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" hidden>
+
+  <div class="modal" id="settingsModal" hidden>
+    <div class="modal-backdrop" data-close-settings></div>
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2>Pengaturan</h2>
+        <button type="button" id="settingsClose">×</button>
+      </div>
+
+      <div class="modal-body">
+        <label for="themeSelect">Tampilan</label>
+        <select id="themeSelect">
+          <option value="system">Mengikuti sistem</option>
+          <option value="light">Terang</option>
+          <option value="dark">Gelap</option>
+        </select>
+
+        <div class="settings-info">
+          <strong>AI Tugas</strong>
+          <span>Asisten belajar pribadi</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="modal-cancel" id="settingsCancel">Batal</button>
+        <button type="button" class="modal-save" id="settingsSave">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="deleteModal" hidden>
+    <div class="modal-backdrop" data-close-delete></div>
+    <div class="modal-box small" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2>Hapus Riwayat Chat?</h2>
+        <button type="button" id="deleteClose">×</button>
+      </div>
+
+      <div class="modal-body">
+        <p>Semua riwayat chat yang tersimpan di perangkat akan dihapus.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="modal-cancel" id="deleteCancel">Batal</button>
+        <button type="button" class="modal-danger" id="deleteConfirm">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <template id="userMessageTemplate">
+    <article class="message user-message">
+      <div class="avatar user-avatar">Kamu</div>
+      <div class="message-body">
+        <div class="message-text" data-message-text></div>
+      </div>
+    </article>
+  </template>
+
+  <template id="aiMessageTemplate">
+    <article class="message ai-message">
+      <div class="avatar ai-avatar">AI</div>
+      <div class="message-body">
+        <div class="message-text" data-message-text></div>
+        <div class="message-actions">
+          <button type="button" data-copy>Salin</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <template id="historyTemplate">
+    <div class="history-item" data-history-item>
+      <button type="button" class="history-open" data-history-open>
+        <span class="history-chat-icon">💬</span>
+        <span class="history-text" data-history-text></span>
+      </button>
+      <button type="button" class="history-delete" data-history-delete aria-label="Hapus riwayat">×</button>
+    </div>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
