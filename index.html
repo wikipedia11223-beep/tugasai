@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+
+    <meta name="theme-color" content="#0f1014">
+    <meta name="description" content="TugasAI - Asisten AI pintar untuk membantu pekerjaan dan tugas.">
+
+    <title>TugasAI</title>
+
+    <!-- CSS akan dipasang pada tahap berikutnya -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- =========================================================
+         APP ROOT
+    ========================================================== -->
+    <div id="app" class="app">
+
+        <!-- =====================================================
+             MOBILE OVERLAY
+        ====================================================== -->
+        <div
+            id="sidebarOverlay"
+            class="sidebar-overlay"
+            aria-hidden="true"
+        ></div>
+
+
+        <!-- =====================================================
+             SIDEBAR
+        ====================================================== -->
+        <aside
+            id="sidebar"
+            class="sidebar"
+            aria-label="Navigasi TugasAI"
+        >
+
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+
+                <button
+                    id="newChatButton"
+                    class="new-chat-button"
+                    type="button"
+                    aria-label="Percakapan baru"
+                >
+                    <span class="new-chat-icon">＋</span>
+                    <span>Percakapan baru</span>
+                </button>
+
+                <button
+                    id="closeSidebarButton"
+                    class="icon-button sidebar-close-button"
+                    type="button"
+                    aria-label="Tutup menu"
+                >
+                    <span>×</span>
+                </button>
+
+            </div>
+
+
+            <!-- Search Conversation -->
+            <div class="sidebar-search">
+
+                <div class="search-box">
+
+                    <span class="search-icon" aria-hidden="true">
+                        ⌕
+                    </span>
+
+                    <input
+                        id="conversationSearch"
+                        type="search"
+                        placeholder="Cari percakapan"
+                        autocomplete="off"
+                        spellcheck="false"
+                        aria-label="Cari percakapan"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- Conversation History -->
+            <div class="conversation-area">
+
+                <div
+                    id="conversationList"
+                    class="conversation-list"
+                    aria-label="Daftar percakapan"
+                >
+
+                    <!--
+                        Percakapan akan dibuat oleh JavaScript.
+                    -->
+
+                </div>
+
+                <div
+                    id="emptyConversationState"
+                    class="empty-conversation-state"
+                    hidden
+                >
+                    <div class="empty-state-icon">◌</div>
+                    <p>Belum ada percakapan.</p>
+                </div>
+
+            </div>
+
+
+            <!-- Sidebar Bottom -->
+            <div class="sidebar-footer">
+
+                <button
+                    id="settingsButton"
+                    class="sidebar-footer-button"
+                    type="button"
+                >
+                    <span class="footer-button-icon">⚙</span>
+                    <span>Pengaturan</span>
+                </button>
+
+                <button
+                    id="themeButton"
+                    class="sidebar-footer-button"
+                    type="button"
+                >
+                    <span class="footer-button-icon">◐</span>
+                    <span>Tampilan</span>
+                </button>
+
+                <div class="user-profile">
+
+                    <div class="user-avatar" aria-hidden="true">
+                        P
+                    </div>
+
+                    <div class="user-profile-info">
+                        <strong id="userName">Pengguna</strong>
+                        <span id="userPlan">Free</span>
+                    </div>
+
+                    <button
+                        id="profileMenuButton"
+                        class="profile-menu-button"
+                        type="button"
+                        aria-label="Menu profil"
+                    >
+                        ⋯
+                    </button>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+
+        <!-- =====================================================
+             MAIN CONTENT
+        ====================================================== -->
+        <main id="mainContent" class="main-content">
+
+            <!-- =================================================
+                 TOP BAR
+            ================================================== -->
+            <header class="topbar">
+
+                <div class="topbar-left">
+
+                    <button
+                        id="openSidebarButton"
+                        class="icon-button mobile-menu-button"
+                        type="button"
+                        aria-label="Buka menu"
+                    >
+                        ☰
+                    </button>
+
+                    <div class="brand">
+
+                        <div
+                            class="brand-mark"
+                            aria-hidden="true"
+                        >
+                            T
+                        </div>
+
+                        <div class="brand-text">
+
+                            <span class="brand-name">
+                                TugasAI
+                            </span>
+
+                            <span
+                                id="modelStatus"
+                                class="model-status"
+                            >
+                                AI
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="topbar-center">
+
+                    <button
+                        id="modelSelectorButton"
+                        class="model-selector"
+                        type="button"
+                        aria-haspopup="listbox"
+                    >
+                        <span id="selectedModel">
+                            TugasAI AI
+                        </span>
+
+                        <span class="model-chevron">
+                            ▾
+                        </span>
+                    </button>
+
+                </div>
+
+
+                <div class="topbar-right">
+
+                    <button
+                        id="shareButton"
+                        class="icon-button"
+                        type="button"
+                        aria-label="Bagikan percakapan"
+                        title="Bagikan"
+                    >
+                        ↗
+                    </button>
+
+                    <button
+                        id="topbarMoreButton"
+                        class="icon-button"
+                        type="button"
+                        aria-label="Menu lainnya"
+                        title="Menu"
+                    >
+                        ⋯
+                    </button>
+
+                </div>
+
+            </header>
+
+
+            <!-- =================================================
+                 MODEL MENU
+            ================================================== -->
+            <div
+                id="modelMenu"
+                class="floating-menu model-menu"
+                role="listbox"
+                aria-label="Pilih model"
+                hidden
+            >
+
+                <button
+                    type="button"
+                    class="model-option active"
+                    data-model="default"
+                    role="option"
+                    aria-selected="true"
+                >
+                    <span class="model-option-main">
+                        <strong>TugasAI AI</strong>
+                        <small>Model utama</small>
+                    </span>
+                    <span class="model-check">✓</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="model-option"
+                    data-model="fast"
+                    role="option"
+                    aria-selected="false"
+                >
+                    <span class="model-option-main">
+                        <strong>TugasAI Fast</strong>
+                        <small>Respons cepat</small>
+                    </span>
+                </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 CHAT VIEW
+            ================================================== -->
+            <section
+                id="chatView"
+                class="chat-view"
+                aria-label="Percakapan"
+            >
+
+                <!-- =============================================
+                     WELCOME SCREEN
+                ============================================== -->
+                <div
+                    id="welcomeScreen"
+                    class="welcome-screen"
+                >
+
+                    <div class="welcome-content">
+
+                        <div class="welcome-logo">
+                            T
+                        </div>
+
+                        <h1>
+                            Apa yang ingin kamu kerjakan?
+                        </h1>
+
+                        <p class="welcome-description">
+                            TugasAI siap membantu mencari ide,
+                            menjelaskan sesuatu, menulis, dan
+                            menyelesaikan berbagai pekerjaan.
+                        </p>
+
+
+                        <!-- Quick Actions -->
+                        <div
+                            id="quickActions"
+                            class="quick-actions"
+                        >
+
+                            <button
+                                class="quick-action"
+                                type="button"
+                                data-prompt="Jelaskan materi ini dengan bahasa yang mudah dipahami."
+                            >
+                                <span class="quick-action-icon">
+                                    ✦
+                                </span>
+
+                                <span>
+                                    Jelaskan sesuatu
+                                </span>
+                            </button>
+
+                            <button
+                                class="quick-action"
+                                type="button"
+                                data-prompt="Bantu saya membuat ide yang kreatif."
+                            >
+                                <span class="quick-action-icon">
+                                    ◇
+                                </span>
+
+                                <span>
+                                    Cari ide
+                                </span>
+                            </button>
+
+                            <button
+                                class="quick-action"
+                                type="button"
+                                data-prompt="Bantu saya menulis teks yang rapi dan profesional."
+                            >
+                                <span class="quick-action-icon">
+                                    ✎
+                                </span>
+
+                                <span>
+                                    Bantu menulis
+                                </span>
+                            </button>
+
+                            <button
+                                class="quick-action"
+                                type="button"
+                                data-prompt="Bantu saya menyelesaikan masalah ini langkah demi langkah."
+                            >
+                                <span class="quick-action-icon">
+                                    ⌁
+                                </span>
+
+                                <span>
+                                    Pecahkan masalah
+                                </span>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =============================================
+                     MESSAGE LIST
+                ============================================== -->
+                <div
+                    id="messageList"
+                    class="message-list"
+                    role="log"
+                    aria-live="polite"
+                    aria-label="Pesan percakapan"
+                >
+
+                    <!--
+                        Pesan user dan AI akan dibuat oleh JavaScript.
+                    -->
+
+                </div>
+
+
+                <!-- =============================================
+                     GENERATING INDICATOR
+                ============================================== -->
+                <div
+                    id="generatingIndicator"
+                    class="generating-indicator"
+                    hidden
+                >
+
+                    <div class="assistant-mini-avatar">
+                        T
+                    </div>
+
+                    <div class="generating-content">
+
+                        <div class="generating-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+
+                        <span>
+                            TugasAI sedang berpikir...
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 COMPOSER AREA
+            ================================================== -->
+            <section
+                id="composerArea"
+                class="composer-area"
+                aria-label="Input pesan"
+            >
+
+                <!-- Attachment Preview -->
+                <div
+                    id="attachmentPreview"
+                    class="attachment-preview"
+                    hidden
+                >
+
+                    <div
+                        id="attachmentList"
+                        class="attachment-list"
+                    ></div>
+
+                </div>
+
+
+                <!-- Composer -->
+                <form
+                    id="messageForm"
+                    class="message-form"
+                    autocomplete="off"
+                >
+
+                    <div class="composer-box">
+
+                        <!-- Attach -->
+                        <button
+                            id="attachButton"
+                            class="composer-button attach-button"
+                            type="button"
+                            aria-label="Lampirkan file"
+                            title="Lampirkan"
+                        >
+                            ＋
+                        </button>
+
+                        <input
+                            id="fileInput"
+                            type="file"
+                            hidden
+                            multiple
+                            accept="image/*,.pdf,.txt,.doc,.docx"
+                        >
+
+
+                        <!-- Text Input -->
+                        <div class="input-wrapper">
+
+                            <textarea
+                                id="messageInput"
+                                name="message"
+                                rows="1"
+                                maxlength="10000"
+                                placeholder="Tulis pesan..."
+                                autocomplete="off"
+                                autocorrect="on"
+                                spellcheck="true"
+                                aria-label="Tulis pesan"
+                            ></textarea>
+
+                            <div class="input-bottom">
+
+                                <span
+                                    id="characterCounter"
+                                    class="character-counter"
+                                >
+                                    0 / 10000
+                                </span>
+
+                                <span class="keyboard-hint">
+                                    Enter untuk kirim
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Voice -->
+                        <button
+                            id="voiceButton"
+                            class="composer-button voice-button"
+                            type="button"
+                            aria-label="Input suara"
+                            title="Input suara"
+                        >
+                            ◉
+                        </button>
+
+
+                        <!-- Send / Stop -->
+                        <button
+                            id="sendButton"
+                            class="send-button"
+                            type="submit"
+                            aria-label="Kirim pesan"
+                            title="Kirim"
+                        >
+                            ↑
+                        </button>
+
+                        <button
+                            id="stopButton"
+                            class="stop-button"
+                            type="button"
+                            aria-label="Hentikan jawaban"
+                            title="Hentikan"
+                            hidden
+                        >
+                            ■
+                        </button>
+
+                    </div>
+
+                </form>
+
+
+                <!-- Composer Disclaimer -->
+                <div class="composer-disclaimer">
+                    TugasAI dapat membuat kesalahan. Periksa kembali
+                    informasi penting.
+                </div>
+
+            </section>
+
+        </main>
+
+
+        <!-- =====================================================
+             SETTINGS MODAL
+        ====================================================== -->
+        <div
+            id="settingsModal"
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settingsTitle"
+            hidden
+        >
+
+            <div class="modal-backdrop" data-close-modal></div>
+
+            <div class="modal-panel">
+
+                <div class="modal-header">
+
+                    <h2 id="settingsTitle">
+                        Pengaturan
+                    </h2>
+
+                    <button
+                        class="icon-button"
+                        type="button"
+                        data-close-modal
+                        aria-label="Tutup pengaturan"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div class="settings-content">
+
+                    <!-- Appearance -->
+                    <div class="settings-section">
+
+                        <h3>
+                            Tampilan
+                        </h3>
+
+                        <div class="setting-row">
+
+                            <div class="setting-info">
+                                <strong>Tema</strong>
+                                <span>
+                                    Atur tampilan aplikasi
+                                </span>
+                            </div>
+
+                            <select
+                                id="themeSelect"
+                                class="settings-select"
+                            >
+                                <option value="system">
+                                    Sistem
+                                </option>
+
+                                <option value="light">
+                                    Terang
+                                </option>
+
+                                <option value="dark">
+                                    Gelap
+                                </option>
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Language -->
+                    <div class="settings-section">
+
+                        <h3>
+                            Bahasa
+                        </h3>
+
+                        <div class="setting-row">
+
+                            <div class="setting-info">
+                                <strong>Bahasa aplikasi</strong>
+                                <span>
+                                    Bahasa antarmuka
+                                </span>
+                            </div>
+
+                            <select
+                                id="languageSelect"
+                                class="settings-select"
+                            >
+                                <option value="id">
+                                    Indonesia
+                                </option>
+
+                                <option value="en">
+                                    English
+                                </option>
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Personalization -->
+                    <div class="settings-section">
+
+                        <h3>
+                            Personalisasi
+                        </h3>
+
+                        <div class="setting-row">
+
+                            <div class="setting-info">
+                                <strong>Nama</strong>
+                                <span>
+                                    Nama yang ditampilkan
+                                </span>
+                            </div>
+
+                            <input
+                                id="nameInput"
+                                class="settings-input"
+                                type="text"
+                                maxlength="40"
+                                placeholder="Pengguna"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Data -->
+                    <div class="settings-section">
+
+                        <h3>
+                            Data
+                        </h3>
+
+                        <button
+                            id="clearHistoryButton"
+                            class="danger-button"
+                            type="button"
+                        >
+                            Hapus semua percakapan
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             CONFIRM MODAL
+        ====================================================== -->
+        <div
+            id="confirmModal"
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirmTitle"
+            hidden
+        >
+
+            <div class="modal-backdrop" data-close-confirm></div>
+
+            <div class="confirm-panel">
+
+                <div class="confirm-icon">
+                    !
+                </div>
+
+                <h2 id="confirmTitle">
+                    Hapus percakapan?
+                </h2>
+
+                <p id="confirmDescription">
+                    Percakapan yang dihapus tidak dapat dipulihkan.
+                </p>
+
+                <div class="confirm-actions">
+
+                    <button
+                        id="cancelConfirmButton"
+                        class="secondary-button"
+                        type="button"
+                    >
+                        Batal
+                    </button>
+
+                    <button
+                        id="confirmActionButton"
+                        class="danger-button"
+                        type="button"
+                    >
+                        Hapus
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             TOAST
+        ====================================================== -->
+        <div
+            id="toastContainer"
+            class="toast-container"
+            aria-live="polite"
+            aria-atomic="true"
+        ></div>
+
+
+        <!-- =====================================================
+             CONTEXT MENU
+        ====================================================== -->
+        <div
+            id="contextMenu"
+            class="context-menu"
+            hidden
+        >
+
+            <button
+                type="button"
+                data-context-action="rename"
+            >
+                <span>✎</span>
+                <span>Ubah nama</span>
+            </button>
+
+            <button
+                type="button"
+                data-context-action="share"
+            >
+                <span>↗</span>
+                <span>Bagikan</span>
+            </button>
+
+            <button
+                type="button"
+                data-context-action="delete"
+                class="context-danger"
+            >
+                <span>⌫</span>
+                <span>Hapus</span>
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         JAVASCRIPT
+         Dipasang setelah struktur HTML agar elemen sudah tersedia.
+    ========================================================== -->
+    <script src="script.js" defer></script>
+
+</body>
+</html>
