@@ -1,6 +1,6 @@
 /* =========================================================
    TUGASAI — MAIN JAVASCRIPT
-   Versi diperbaiki — siap terhubung ke backend AI
+   FINAL — Railway + OpenRouter Backend
 ========================================================= */
 
 "use strict";
@@ -21,15 +21,14 @@ const CONFIG = {
 
     maxHistory: 50,
 
-    /* DEMO DIMATIKAN */
     demoMode: false,
 
     /*
-       GANTI INI dengan endpoint backend kamu.
-       Contoh:
-       https://domain-backend-kamu.onrender.com/api/chat
-    */
-    apiEndpoint: "",
+     * Backend Railway.
+     * Karena server.js dan frontend berada
+     * dalam service yang sama, gunakan relative URL.
+     */
+    apiEndpoint: "/api/chat",
 
     typingDelay: 18,
 
@@ -72,7 +71,7 @@ const state = {
    3. DOM HELPER
 ========================================================= */
 
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 
 const DOM = {};
 
@@ -154,7 +153,21 @@ function cacheDOM() {
 
 
 /* =========================================================
-   5. STORAGE
+   5. SAFE EVENT HELPER
+========================================================= */
+
+function on(element, event, handler) {
+
+    if (!element) {
+        return;
+    }
+
+    element.addEventListener(event, handler);
+}
+
+
+/* =========================================================
+   6. STORAGE
 ========================================================= */
 
 function loadData() {
@@ -173,7 +186,9 @@ function loadData() {
             const parsed = JSON.parse(savedData);
 
             if (Array.isArray(parsed)) {
+
                 state.conversations = parsed;
+
             }
 
         }
@@ -184,10 +199,17 @@ function loadData() {
             const parsedSettings =
                 JSON.parse(savedSettings);
 
-            state.settings = {
-                ...state.settings,
-                ...parsedSettings
-            };
+            if (
+                parsedSettings &&
+                typeof parsedSettings === "object"
+            ) {
+
+                state.settings = {
+                    ...state.settings,
+                    ...parsedSettings
+                };
+
+            }
 
         }
 
@@ -199,6 +221,7 @@ function loadData() {
         );
 
     }
+
 }
 
 
@@ -219,6 +242,7 @@ function saveData() {
         );
 
     }
+
 }
 
 
@@ -239,11 +263,12 @@ function saveSettings() {
         );
 
     }
+
 }
 
 
 /* =========================================================
-   6. ID GENERATOR
+   7. ID
 ========================================================= */
 
 function createId(prefix = "id") {
@@ -257,11 +282,12 @@ function createId(prefix = "id") {
             .toString(36)
             .slice(2, 9)
     );
+
 }
 
 
 /* =========================================================
-   7. DATE
+   8. DATE
 ========================================================= */
 
 function getDateLabel(timestamp) {
@@ -272,14 +298,18 @@ function getDateLabel(timestamp) {
 
     const yesterday = new Date();
 
-    yesterday.setDate(today.getDate() - 1);
+    yesterday.setDate(
+        today.getDate() - 1
+    );
 
 
     if (
         date.toDateString() ===
         today.toDateString()
     ) {
+
         return "Hari ini";
+
     }
 
 
@@ -287,7 +317,9 @@ function getDateLabel(timestamp) {
         date.toDateString() ===
         yesterday.toDateString()
     ) {
+
         return "Kemarin";
+
     }
 
 
@@ -298,11 +330,12 @@ function getDateLabel(timestamp) {
             month: "short"
         }
     );
+
 }
 
 
 /* =========================================================
-   8. CONVERSATION
+   9. CONVERSATION
 ========================================================= */
 
 function createConversation(firstMessage = "") {
@@ -327,7 +360,9 @@ function createConversation(firstMessage = "") {
     };
 
 
-    state.conversations.unshift(conversation);
+    state.conversations.unshift(
+        conversation
+    );
 
     state.activeConversationId =
         conversation.id;
@@ -342,22 +377,29 @@ function createConversation(firstMessage = "") {
     renderActiveConversation();
 
     return conversation;
+
 }
 
 
 function createConversationTitle(text) {
 
-    const clean = text
-        .replace(/\s+/g, " ")
-        .trim();
+    const clean =
+        String(text)
+            .replace(/\s+/g, " ")
+            .trim();
+
 
     if (!clean) {
+
         return "Percakapan baru";
+
     }
+
 
     return clean.length > 42
         ? clean.slice(0, 42).trim() + "..."
         : clean;
+
 }
 
 
@@ -368,6 +410,7 @@ function getActiveConversation() {
             conversation.id ===
             state.activeConversationId
     ) || null;
+
 }
 
 
@@ -385,6 +428,7 @@ function trimConversationHistory() {
             );
 
     }
+
 }
 
 
@@ -414,6 +458,7 @@ function deleteConversation(id) {
     renderConversationList();
 
     renderActiveConversation();
+
 }
 
 
@@ -426,7 +471,9 @@ function renameConversation(id) {
 
 
     if (!conversation) {
+
         return;
+
     }
 
 
@@ -438,7 +485,9 @@ function renameConversation(id) {
 
 
     if (newTitle === null) {
+
         return;
+
     }
 
 
@@ -447,8 +496,13 @@ function renameConversation(id) {
 
 
     if (!cleanTitle) {
-        showToast("Nama tidak boleh kosong.");
+
+        showToast(
+            "Nama tidak boleh kosong."
+        );
+
         return;
+
     }
 
 
@@ -463,18 +517,25 @@ function renameConversation(id) {
 
     renderConversationList();
 
-    showToast("Nama percakapan diperbarui.");
+    showToast(
+        "Nama percakapan diperbarui."
+    );
+
 }
 
 
 /* =========================================================
-   9. RENDER CONVERSATIONS
+   10. RENDER CONVERSATIONS
 ========================================================= */
 
-function renderConversationList(searchTerm = "") {
+function renderConversationList(
+    searchTerm = ""
+) {
 
     if (!DOM.conversationList) {
+
         return;
+
     }
 
 
@@ -482,7 +543,9 @@ function renderConversationList(searchTerm = "") {
 
 
     const normalizedSearch =
-        searchTerm.trim().toLowerCase();
+        searchTerm
+            .trim()
+            .toLowerCase();
 
 
     const filtered =
@@ -490,14 +553,19 @@ function renderConversationList(searchTerm = "") {
             conversation => {
 
                 if (!normalizedSearch) {
+
                     return true;
+
                 }
 
-                return (
-                    conversation.title
-                        .toLowerCase()
-                        .includes(normalizedSearch)
-                );
+
+                return String(
+                    conversation.title || ""
+                )
+                    .toLowerCase()
+                    .includes(
+                        normalizedSearch
+                    );
 
             }
         );
@@ -511,75 +579,91 @@ function renderConversationList(searchTerm = "") {
     }
 
 
-    filtered.forEach(conversation => {
+    filtered.forEach(
+        conversation => {
 
-        const button =
-            document.createElement("button");
-
-        button.type = "button";
-
-        button.className =
-            "conversation-item";
+            const button =
+                document.createElement(
+                    "button"
+                );
 
 
-        if (
-            conversation.id ===
-            state.activeConversationId
-        ) {
+            button.type = "button";
 
-            button.classList.add("active");
+            button.className =
+                "conversation-item";
+
+
+            if (
+                conversation.id ===
+                state.activeConversationId
+            ) {
+
+                button.classList.add(
+                    "active"
+                );
+
+            }
+
+
+            button.dataset.conversationId =
+                conversation.id;
+
+
+            const title =
+                document.createElement(
+                    "span"
+                );
+
+
+            title.className =
+                "conversation-item-title";
+
+
+            title.textContent =
+                conversation.title ||
+                "Percakapan baru";
+
+
+            button.appendChild(title);
+
+
+            on(
+                button,
+                "click",
+                () => {
+
+                    openConversation(
+                        conversation.id
+                    );
+
+                }
+            );
+
+
+            on(
+                button,
+                "contextmenu",
+                event => {
+
+                    event.preventDefault();
+
+                    showContextMenu(
+                        event.clientX,
+                        event.clientY,
+                        conversation.id
+                    );
+
+                }
+            );
+
+
+            DOM.conversationList.appendChild(
+                button
+            );
 
         }
-
-
-        button.dataset.conversationId =
-            conversation.id;
-
-
-        const title =
-            document.createElement("span");
-
-        title.className =
-            "conversation-item-title";
-
-        title.textContent =
-            conversation.title;
-
-
-        button.appendChild(title);
-
-
-        button.addEventListener(
-            "click",
-            () => {
-
-                openConversation(
-                    conversation.id
-                );
-
-            }
-        );
-
-
-        button.addEventListener(
-            "contextmenu",
-            event => {
-
-                event.preventDefault();
-
-                showContextMenu(
-                    event.clientX,
-                    event.clientY,
-                    conversation.id
-                );
-
-            }
-        );
-
-
-        DOM.conversationList.appendChild(button);
-
-    });
+    );
 
 }
 
@@ -594,7 +678,9 @@ function openConversation(id) {
 
 
     if (!exists) {
+
         return;
+
     }
 
 
@@ -611,17 +697,20 @@ function openConversation(id) {
     closeSidebar();
 
     scrollMessagesToBottom(false);
+
 }
 
 
 /* =========================================================
-   10. RENDER ACTIVE CHAT
+   11. ACTIVE CHAT
 ========================================================= */
 
 function renderActiveConversation() {
 
     if (!DOM.messageList) {
+
         return;
+
     }
 
 
@@ -635,7 +724,9 @@ function renderActiveConversation() {
     if (!conversation) {
 
         if (DOM.welcomeScreen) {
+
             DOM.welcomeScreen.hidden = false;
+
         }
 
         return;
@@ -644,12 +735,16 @@ function renderActiveConversation() {
 
 
     if (
-        !Array.isArray(conversation.messages) ||
+        !Array.isArray(
+            conversation.messages
+        ) ||
         conversation.messages.length === 0
     ) {
 
         if (DOM.welcomeScreen) {
+
             DOM.welcomeScreen.hidden = false;
+
         }
 
         return;
@@ -658,7 +753,9 @@ function renderActiveConversation() {
 
 
     if (DOM.welcomeScreen) {
+
         DOM.welcomeScreen.hidden = true;
+
     }
 
 
@@ -675,38 +772,62 @@ function renderActiveConversation() {
 
 
     scrollMessagesToBottom(false);
+
 }
 
 
 /* =========================================================
-   11. MESSAGE RENDER
+   12. MESSAGE RENDER
 ========================================================= */
 
-function renderMessage(message, scroll = true) {
+function renderMessage(
+    message,
+    scroll = true
+) {
+
+    if (!DOM.messageList) {
+
+        return null;
+
+    }
+
 
     const wrapper =
-        document.createElement("article");
+        document.createElement(
+            "article"
+        );
+
 
     wrapper.className =
         `message ${message.role}`;
 
 
     const inner =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     inner.className =
         "message-inner";
 
 
-    if (message.role === "assistant") {
+    if (
+        message.role === "assistant"
+    ) {
 
         const avatar =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
+
 
         avatar.className =
             "assistant-avatar";
 
+
         avatar.textContent = "T";
+
 
         inner.appendChild(avatar);
 
@@ -714,29 +835,41 @@ function renderMessage(message, scroll = true) {
 
 
     const content =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     content.className =
         "message-content";
 
 
     content.innerHTML =
-        formatMessage(message.content);
+        formatMessage(
+            message.content
+        );
 
 
     inner.appendChild(content);
 
 
-    if (message.role === "user") {
+    if (
+        message.role === "user"
+    ) {
 
         const avatar =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
+
 
         avatar.className =
             "user-avatar-message";
 
+
         avatar.textContent =
             getUserInitial();
+
 
         inner.appendChild(avatar);
 
@@ -746,10 +879,15 @@ function renderMessage(message, scroll = true) {
     wrapper.appendChild(inner);
 
 
-    if (message.role === "assistant") {
+    if (
+        message.role === "assistant"
+    ) {
 
         const actions =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
+
 
         actions.className =
             "message-actions";
@@ -759,7 +897,10 @@ function renderMessage(message, scroll = true) {
             createMessageAction(
                 "⧉",
                 "Salin",
-                () => copyText(message.content)
+                () =>
+                    copyText(
+                        message.content
+                    )
             )
         );
 
@@ -769,37 +910,60 @@ function renderMessage(message, scroll = true) {
     }
 
 
-    DOM.messageList.appendChild(wrapper);
+    DOM.messageList.appendChild(
+        wrapper
+    );
 
 
     if (scroll) {
+
         scrollMessagesToBottom(true);
+
     }
 
 
     return wrapper;
+
 }
 
 
 /* =========================================================
-   12. MESSAGE FORMATTER
+   13. FORMAT MESSAGE
 ========================================================= */
 
 function escapeHTML(text) {
 
     return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
 }
 
 
 function formatMessage(text) {
 
     if (!text) {
+
         return "";
+
     }
 
 
@@ -817,7 +981,11 @@ function formatMessage(text) {
             const index =
                 codeBlocks.length;
 
-            codeBlocks.push(code.trim());
+
+            codeBlocks.push(
+                code.trim()
+            );
+
 
             return `@@CODEBLOCK_${index}@@`;
 
@@ -857,6 +1025,7 @@ function formatMessage(text) {
 
 
     return safe;
+
 }
 
 
@@ -867,40 +1036,58 @@ function createMessageAction(
 ) {
 
     const button =
-        document.createElement("button");
+        document.createElement(
+            "button"
+        );
+
 
     button.type = "button";
 
     button.className =
         "message-action-button";
 
+
     button.title = label;
+
 
     button.setAttribute(
         "aria-label",
         label
     );
 
+
     button.textContent = icon;
 
-    button.addEventListener(
+
+    on(
+        button,
         "click",
         callback
     );
 
 
     return button;
+
 }
 
 
 /* =========================================================
-   13. SEND MESSAGE
+   14. SEND MESSAGE
 ========================================================= */
 
 async function handleSendMessage() {
 
     if (state.isGenerating) {
+
         return;
+
+    }
+
+
+    if (!DOM.messageInput) {
+
+        return;
+
     }
 
 
@@ -909,7 +1096,9 @@ async function handleSendMessage() {
 
 
     if (!text) {
+
         return;
+
     }
 
 
@@ -923,6 +1112,7 @@ async function handleSendMessage() {
         );
 
         return;
+
     }
 
 
@@ -934,6 +1124,17 @@ async function handleSendMessage() {
 
         conversation =
             createConversation(text);
+
+    }
+
+
+    if (
+        !Array.isArray(
+            conversation.messages
+        )
+    ) {
+
+        conversation.messages = [];
 
     }
 
@@ -965,7 +1166,9 @@ async function handleSendMessage() {
     ) {
 
         conversation.title =
-            createConversationTitle(text);
+            createConversationTitle(
+                text
+            );
 
     }
 
@@ -980,7 +1183,9 @@ async function handleSendMessage() {
 
 
     if (DOM.welcomeScreen) {
+
         DOM.welcomeScreen.hidden = true;
+
     }
 
 
@@ -1003,7 +1208,7 @@ async function handleSendMessage() {
 
 
 /* =========================================================
-   14. AI RESPONSE
+   15. AI RESPONSE
 ========================================================= */
 
 async function generateAssistantResponse(
@@ -1022,12 +1227,6 @@ async function generateAssistantResponse(
 
 
     try {
-
-        /*
-         * MODE DEMO SUDAH DIMATIKAN.
-         * Semua pesan sekarang diarahkan
-         * ke backend AI.
-         */
 
         await generateAPIResponse(
             conversation
@@ -1048,7 +1247,17 @@ async function generateAssistantResponse(
             let errorText =
                 "Maaf, terjadi kesalahan saat menghubungkan ke AI.";
 
+
             if (
+                error &&
+                error.name ===
+                "AbortError"
+            ) {
+
+                errorText =
+                    "Permintaan AI melebihi batas waktu.";
+
+            } else if (
                 error &&
                 error.message
             ) {
@@ -1075,6 +1284,10 @@ async function generateAssistantResponse(
             conversation.messages.push(
                 errorMessage
             );
+
+
+            conversation.updatedAt =
+                Date.now();
 
 
             renderMessage(
@@ -1107,36 +1320,52 @@ async function generateAssistantResponse(
 
 
 /* =========================================================
-   15. REAL API
+   16. REAL API — RAILWAY
 ========================================================= */
 
 async function generateAPIResponse(
     conversation
 ) {
 
+    /*
+     * Endpoint final:
+     *
+     * /api/chat
+     *
+     * Browser akan otomatis memakai
+     * domain Railway tempat web ini berjalan.
+     */
+
+    const endpoint =
+        CONFIG.apiEndpoint;
+
+
     if (
-        !CONFIG.apiEndpoint ||
-        !CONFIG.apiEndpoint.trim()
+        !endpoint ||
+        typeof endpoint !== "string"
     ) {
 
         throw new Error(
-            "Backend AI belum terhubung. Isi CONFIG.apiEndpoint dengan alamat backend TugasAI."
+            "Endpoint backend belum tersedia."
         );
 
     }
 
 
-    /*
-     * Kirim seluruh riwayat percakapan.
-     * Ini yang membuat backend/model bisa
-     * menerima konteks percakapan sebelumnya.
-     */
-
     const messages =
         conversation.messages.map(
             message => ({
-                role: message.role,
-                content: message.content
+
+                role:
+                    message.role === "assistant"
+                        ? "assistant"
+                        : "user",
+
+                content:
+                    String(
+                        message.content || ""
+                    )
+
             })
         );
 
@@ -1148,7 +1377,11 @@ async function generateAPIResponse(
 
     const timeout =
         setTimeout(
-            () => controller.abort(),
+            () => {
+
+                controller.abort();
+
+            },
             CONFIG.requestTimeout
         );
 
@@ -1157,37 +1390,43 @@ async function generateAPIResponse(
 
         const response =
             await fetch(
-                CONFIG.apiEndpoint,
+                endpoint,
                 {
+
                     method: "POST",
 
                     headers: {
+
                         "Content-Type":
                             "application/json",
 
                         "Accept":
                             "application/json"
+
                     },
 
-                    body: JSON.stringify({
+                    body:
+                        JSON.stringify({
 
-                        model:
-                            state.selectedModel,
+                            model:
+                                state.selectedModel,
 
-                        messages,
+                            messages,
 
-                        conversationId:
-                            conversation.id,
+                            conversationId:
+                                conversation.id,
 
-                        user: {
-                            name:
-                                state.settings.name,
+                            user: {
 
-                            language:
-                                state.settings.language
-                        }
+                                name:
+                                    state.settings.name,
 
-                    }),
+                                language:
+                                    state.settings.language
+
+                            }
+
+                        }),
 
                     signal:
                         controller.signal
@@ -1196,21 +1435,27 @@ async function generateAPIResponse(
             );
 
 
+        let data = null;
+
+
+        try {
+
+            data =
+                await response.json();
+
+        } catch {
+
+            data = null;
+
+        }
+
+
         if (!response.ok) {
 
-            let serverMessage = "";
-
-            try {
-
-                const errorData =
-                    await response.json();
-
-                serverMessage =
-                    errorData.error ||
-                    errorData.message ||
-                    "";
-
-            } catch (_) {}
+            const serverMessage =
+                data?.error ||
+                data?.message ||
+                "";
 
 
             throw new Error(
@@ -1221,14 +1466,6 @@ async function generateAPIResponse(
         }
 
 
-        const data =
-            await response.json();
-
-
-        /*
-         * Mendukung beberapa format respons backend.
-         */
-
         const answer =
             extractAIAnswer(data);
 
@@ -1236,7 +1473,7 @@ async function generateAPIResponse(
         if (!answer) {
 
             throw new Error(
-                "Backend berhasil merespons, tetapi tidak mengirim jawaban AI."
+                "Backend berhasil merespons, tetapi jawaban AI kosong."
             );
 
         }
@@ -1282,20 +1519,17 @@ async function generateAPIResponse(
 
 
 /* =========================================================
-   16. EXTRACT AI RESPONSE
+   17. EXTRACT AI RESPONSE
 ========================================================= */
 
 function extractAIAnswer(data) {
 
     if (!data) {
+
         return "";
+
     }
 
-
-    /*
-     * Format sederhana:
-     * { "answer": "..." }
-     */
 
     if (
         typeof data.answer === "string"
@@ -1306,11 +1540,6 @@ function extractAIAnswer(data) {
     }
 
 
-    /*
-     * Format:
-     * { "message": "..." }
-     */
-
     if (
         typeof data.message === "string"
     ) {
@@ -1320,10 +1549,16 @@ function extractAIAnswer(data) {
     }
 
 
-    /*
-     * Format OpenAI-compatible:
-     * { choices: [{ message: { content: "..." }}] }
-     */
+    if (
+        data.message &&
+        typeof data.message.content ===
+            "string"
+    ) {
+
+        return data.message.content.trim();
+
+    }
+
 
     if (
         Array.isArray(data.choices) &&
@@ -1356,11 +1591,6 @@ function extractAIAnswer(data) {
     }
 
 
-    /*
-     * Format:
-     * { "content": "..." }
-     */
-
     if (
         typeof data.content === "string"
     ) {
@@ -1376,10 +1606,12 @@ function extractAIAnswer(data) {
 
 
 /* =========================================================
-   17. GENERATION UI
+   18. GENERATION UI
 ========================================================= */
 
-function updateGeneratingUI(isGenerating) {
+function updateGeneratingUI(
+    isGenerating
+) {
 
     if (DOM.generatingIndicator) {
 
@@ -1410,6 +1642,7 @@ function updateGeneratingUI(isGenerating) {
         DOM.messageInput.disabled =
             isGenerating;
 
+
         DOM.messageInput.placeholder =
             isGenerating
                 ? "Tunggu jawaban selesai..."
@@ -1437,13 +1670,15 @@ function updateGeneratingUI(isGenerating) {
 
 
 /* =========================================================
-   18. STOP GENERATING
+   19. STOP
 ========================================================= */
 
 function stopGenerating() {
 
     if (!state.isGenerating) {
+
         return;
+
     }
 
 
@@ -1465,8 +1700,6 @@ function stopGenerating() {
 
         state.abortController.abort();
 
-        state.abortController = null;
-
     }
 
 
@@ -1478,13 +1711,15 @@ function stopGenerating() {
 
 
 /* =========================================================
-   19. TEXTAREA
+   20. TEXTAREA
 ========================================================= */
 
 function updateCharacterCounter() {
 
     if (!DOM.messageInput) {
+
         return;
+
     }
 
 
@@ -1498,20 +1733,11 @@ function updateCharacterCounter() {
             `${length} / ${CONFIG.maxCharacters}`;
 
 
-        if (
+        DOM.characterCounter.style.color =
             length >
             CONFIG.maxCharacters * 0.9
-        ) {
-
-            DOM.characterCounter.style.color =
-                "#ff8b91";
-
-        } else {
-
-            DOM.characterCounter.style.color =
-                "";
-
-        }
+                ? "#ff8b91"
+                : "";
 
     }
 
@@ -1521,7 +1747,9 @@ function updateCharacterCounter() {
 function autoResizeTextarea() {
 
     if (!DOM.messageInput) {
+
         return;
+
     }
 
 
@@ -1529,8 +1757,7 @@ function autoResizeTextarea() {
         DOM.messageInput;
 
 
-    textarea.style.height =
-        "auto";
+    textarea.style.height = "auto";
 
 
     const newHeight =
@@ -1547,7 +1774,7 @@ function autoResizeTextarea() {
 
 
 /* =========================================================
-   20. KEYBOARD
+   21. KEYBOARD
 ========================================================= */
 
 function handleInputKeydown(event) {
@@ -1559,8 +1786,11 @@ function handleInputKeydown(event) {
 
         event.preventDefault();
 
+
         if (!state.isGenerating) {
+
             handleSendMessage();
+
         }
 
     }
@@ -1569,7 +1799,7 @@ function handleInputKeydown(event) {
 
 
 /* =========================================================
-   21. QUICK ACTIONS
+   22. QUICK ACTIONS
 ========================================================= */
 
 function handleQuickAction(event) {
@@ -1580,8 +1810,10 @@ function handleQuickAction(event) {
         );
 
 
-    if (!button) {
+    if (!button || !DOM.messageInput) {
+
         return;
+
     }
 
 
@@ -1590,7 +1822,9 @@ function handleQuickAction(event) {
 
 
     if (!prompt) {
+
         return;
+
     }
 
 
@@ -1608,7 +1842,7 @@ function handleQuickAction(event) {
 
 
 /* =========================================================
-   22. NEW CHAT
+   23. NEW CHAT
 ========================================================= */
 
 function startNewChat() {
@@ -1620,18 +1854,33 @@ function startNewChat() {
         );
 
         return;
+
     }
 
 
-    state.activeConversationId =
-        null;
+    state.activeConversationId = null;
 
 
-    DOM.messageList.innerHTML = "";
+    if (DOM.messageList) {
 
-    DOM.welcomeScreen.hidden = false;
+        DOM.messageList.innerHTML = "";
 
-    DOM.messageInput.value = "";
+    }
+
+
+    if (DOM.welcomeScreen) {
+
+        DOM.welcomeScreen.hidden = false;
+
+    }
+
+
+    if (DOM.messageInput) {
+
+        DOM.messageInput.value = "";
+
+    }
+
 
     updateCharacterCounter();
 
@@ -1643,44 +1892,76 @@ function startNewChat() {
 
     closeSidebar();
 
-    DOM.messageInput.focus();
+
+    if (DOM.messageInput) {
+
+        DOM.messageInput.focus();
+
+    }
 
 }
 
 
 /* =========================================================
-   23. SIDEBAR
+   24. SIDEBAR
 ========================================================= */
 
 function openSidebar() {
 
-    DOM.sidebar.classList.add("open");
+    if (DOM.sidebar) {
 
-    DOM.sidebarOverlay.classList.add(
-        "active"
-    );
+        DOM.sidebar.classList.add(
+            "open"
+        );
+
+    }
+
+
+    if (DOM.sidebarOverlay) {
+
+        DOM.sidebarOverlay.classList.add(
+            "active"
+        );
+
+    }
 
 }
 
 
 function closeSidebar() {
 
-    DOM.sidebar.classList.remove(
-        "open"
-    );
+    if (DOM.sidebar) {
 
-    DOM.sidebarOverlay.classList.remove(
-        "active"
-    );
+        DOM.sidebar.classList.remove(
+            "open"
+        );
+
+    }
+
+
+    if (DOM.sidebarOverlay) {
+
+        DOM.sidebarOverlay.classList.remove(
+            "active"
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   24. MODEL MENU
+   25. MODEL
 ========================================================= */
 
 function toggleModelMenu() {
+
+    if (!DOM.modelMenu) {
+
+        return;
+
+    }
+
 
     DOM.modelMenu.hidden =
         !DOM.modelMenu.hidden;
@@ -1690,14 +1971,26 @@ function toggleModelMenu() {
 
 function closeModelMenu() {
 
-    DOM.modelMenu.hidden = true;
+    if (DOM.modelMenu) {
+
+        DOM.modelMenu.hidden = true;
+
+    }
 
 }
 
 
 function selectModel(model) {
 
-    state.selectedModel = model;
+    state.selectedModel =
+        model || "default";
+
+
+    if (!DOM.modelMenu) {
+
+        return;
+
+    }
 
 
     const options =
@@ -1706,41 +1999,45 @@ function selectModel(model) {
         );
 
 
-    options.forEach(option => {
+    options.forEach(
+        option => {
 
-        const isSelected =
-            option.dataset.model === model;
-
-
-        option.classList.toggle(
-            "active",
-            isSelected
-        );
+            const isSelected =
+                option.dataset.model ===
+                model;
 
 
-        option.setAttribute(
-            "aria-selected",
-            String(isSelected)
-        );
-
-    });
+            option.classList.toggle(
+                "active",
+                isSelected
+            );
 
 
-    if (model === "fast") {
+            option.setAttribute(
+                "aria-selected",
+                String(isSelected)
+            );
 
-        DOM.selectedModel.textContent =
-            "TugasAI Fast";
+        }
+    );
 
-        DOM.modelStatus.textContent =
-            "Fast";
 
-    } else {
+    if (DOM.selectedModel) {
 
         DOM.selectedModel.textContent =
-            "TugasAI AI";
+            model === "fast"
+                ? "TugasAI Fast"
+                : "TugasAI AI";
+
+    }
+
+
+    if (DOM.modelStatus) {
 
         DOM.modelStatus.textContent =
-            "AI";
+            model === "fast"
+                ? "Fast"
+                : "AI";
 
     }
 
@@ -1751,10 +2048,17 @@ function selectModel(model) {
 
 
 /* =========================================================
-   25. SETTINGS
+   26. SETTINGS
 ========================================================= */
 
 function openSettings() {
+
+    if (!DOM.settingsModal) {
+
+        return;
+
+    }
+
 
     DOM.settingsModal.hidden = false;
 
@@ -1765,31 +2069,57 @@ function openSettings() {
 
 function closeSettings() {
 
-    DOM.settingsModal.hidden = true;
+    if (DOM.settingsModal) {
+
+        DOM.settingsModal.hidden = true;
+
+    }
 
 }
 
 
 function syncSettingsUI() {
 
-    DOM.themeSelect.value =
-        state.settings.theme;
+    if (DOM.themeSelect) {
 
-    DOM.languageSelect.value =
-        state.settings.language;
+        DOM.themeSelect.value =
+            state.settings.theme;
 
-    DOM.nameInput.value =
-        state.settings.name;
+    }
 
-    DOM.userName.textContent =
-        state.settings.name || "Pengguna";
+
+    if (DOM.languageSelect) {
+
+        DOM.languageSelect.value =
+            state.settings.language;
+
+    }
+
+
+    if (DOM.nameInput) {
+
+        DOM.nameInput.value =
+            state.settings.name;
+
+    }
+
+
+    if (DOM.userName) {
+
+        DOM.userName.textContent =
+            state.settings.name ||
+            "Pengguna";
+
+    }
 
 }
 
 
 function updateTheme(theme) {
 
-    state.settings.theme = theme;
+    state.settings.theme =
+        theme;
+
 
     applyTheme();
 
@@ -1827,15 +2157,19 @@ function applyTheme() {
 function updateName(name) {
 
     const clean =
-        name.trim();
+        String(name || "").trim();
 
 
     state.settings.name =
         clean || "Pengguna";
 
 
-    DOM.userName.textContent =
-        state.settings.name;
+    if (DOM.userName) {
+
+        DOM.userName.textContent =
+            state.settings.name;
+
+    }
 
 
     saveSettings();
@@ -1849,7 +2183,7 @@ function updateName(name) {
 
 
 /* =========================================================
-   26. CLEAR HISTORY
+   27. CLEAR HISTORY
 ========================================================= */
 
 function askClearHistory() {
@@ -1863,17 +2197,26 @@ function askClearHistory() {
         );
 
         return;
+
     }
 
 
-    DOM.confirmModal.hidden = false;
+    if (DOM.confirmModal) {
+
+        DOM.confirmModal.hidden = false;
+
+    }
 
 }
 
 
 function closeConfirmModal() {
 
-    DOM.confirmModal.hidden = true;
+    if (DOM.confirmModal) {
+
+        DOM.confirmModal.hidden = true;
+
+    }
 
 }
 
@@ -1900,13 +2243,18 @@ function confirmClearHistory() {
 
 
 /* =========================================================
-   27. FILE ATTACHMENT
+   28. FILE ATTACHMENT
 ========================================================= */
 
 function openFilePicker() {
 
-    if (state.isGenerating) {
+    if (
+        state.isGenerating ||
+        !DOM.fileInput
+    ) {
+
         return;
+
     }
 
 
@@ -1924,19 +2272,18 @@ function handleFiles(event) {
 
 
     if (!files.length) {
+
         return;
+
     }
 
 
     const validFiles =
-        files.filter(file => {
-
-            const maxSize =
-                15 * 1024 * 1024;
-
-            return file.size <= maxSize;
-
-        });
+        files.filter(
+            file =>
+                file.size <=
+                15 * 1024 * 1024
+        );
 
 
     if (
@@ -1966,6 +2313,16 @@ function handleFiles(event) {
 
 function renderAttachments() {
 
+    if (
+        !DOM.attachmentList ||
+        !DOM.attachmentPreview
+    ) {
+
+        return;
+
+    }
+
+
     DOM.attachmentList.innerHTML = "";
 
 
@@ -1977,7 +2334,10 @@ function renderAttachments() {
         (file, index) => {
 
             const item =
-                document.createElement("div");
+                document.createElement(
+                    "div"
+                );
+
 
             item.className =
                 "attachment-item";
@@ -1990,7 +2350,10 @@ function renderAttachments() {
             ) {
 
                 const image =
-                    document.createElement("img");
+                    document.createElement(
+                        "img"
+                    );
+
 
                 image.alt =
                     file.name;
@@ -2031,28 +2394,26 @@ function renderAttachments() {
 
 
             const removeButton =
-                document.createElement("button");
+                document.createElement(
+                    "button"
+                );
 
-            removeButton.type =
-                "button";
 
-            removeButton.textContent =
-                "×";
+            removeButton.type = "button";
+
+            removeButton.textContent = "×";
+
 
             removeButton.style.position =
                 "absolute";
 
-            removeButton.style.right =
-                "4px";
+            removeButton.style.right = "4px";
 
-            removeButton.style.top =
-                "4px";
+            removeButton.style.top = "4px";
 
-            removeButton.style.width =
-                "20px";
+            removeButton.style.width = "20px";
 
-            removeButton.style.height =
-                "20px";
+            removeButton.style.height = "20px";
 
             removeButton.style.borderRadius =
                 "50%";
@@ -2064,7 +2425,8 @@ function renderAttachments() {
                 "#fff";
 
 
-            removeButton.addEventListener(
+            on(
+                removeButton,
                 "click",
                 () => {
 
@@ -2098,7 +2460,13 @@ function clearAttachments() {
 
     state.pendingFiles = [];
 
-    DOM.fileInput.value = "";
+
+    if (DOM.fileInput) {
+
+        DOM.fileInput.value = "";
+
+    }
+
 
     renderAttachments();
 
@@ -2106,7 +2474,7 @@ function clearAttachments() {
 
 
 /* =========================================================
-   28. VOICE INPUT
+   29. VOICE INPUT
 ========================================================= */
 
 function startVoiceInput() {
@@ -2123,11 +2491,17 @@ function startVoiceInput() {
         );
 
         return;
+
     }
 
 
-    if (state.isGenerating) {
+    if (
+        state.isGenerating ||
+        !DOM.messageInput
+    ) {
+
         return;
+
     }
 
 
@@ -2148,11 +2522,16 @@ function startVoiceInput() {
 
     recognition.onstart = () => {
 
-        DOM.voiceButton.style.background =
-            "var(--accent-soft)";
+        if (DOM.voiceButton) {
 
-        DOM.voiceButton.style.color =
-            "var(--accent-hover)";
+            DOM.voiceButton.style.background =
+                "var(--accent-soft)";
+
+            DOM.voiceButton.style.color =
+                "var(--accent-hover)";
+
+        }
+
 
         showToast(
             "Silakan berbicara..."
@@ -2165,6 +2544,7 @@ function startVoiceInput() {
         event => {
 
             let transcript = "";
+
 
             for (
                 let i = event.resultIndex;
@@ -2181,6 +2561,7 @@ function startVoiceInput() {
             DOM.messageInput.value =
                 transcript;
 
+
             updateCharacterCounter();
 
             autoResizeTextarea();
@@ -2196,6 +2577,7 @@ function startVoiceInput() {
                 error
             );
 
+
             showToast(
                 "Input suara tidak dapat digunakan."
             );
@@ -2205,22 +2587,37 @@ function startVoiceInput() {
 
     recognition.onend = () => {
 
-        DOM.voiceButton.style.background =
-            "";
+        if (DOM.voiceButton) {
 
-        DOM.voiceButton.style.color =
-            "";
+            DOM.voiceButton.style.background =
+                "";
+
+            DOM.voiceButton.style.color =
+                "";
+
+        }
 
     };
 
 
-    recognition.start();
+    try {
+
+        recognition.start();
+
+    } catch (error) {
+
+        console.warn(
+            "Voice start:",
+            error
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   29. COPY
+   30. COPY
 ========================================================= */
 
 async function copyText(text) {
@@ -2239,25 +2636,27 @@ async function copyText(text) {
         } else {
 
             const textarea =
-                document.createElement("textarea");
+                document.createElement(
+                    "textarea"
+                );
+
 
             textarea.value = text;
 
             textarea.style.position =
                 "fixed";
 
-            textarea.style.opacity =
-                "0";
+            textarea.style.opacity = "0";
+
 
             document.body.appendChild(
                 textarea
             );
 
+
             textarea.select();
 
-            document.execCommand(
-                "copy"
-            );
+            document.execCommand("copy");
 
             textarea.remove();
 
@@ -2275,6 +2674,7 @@ async function copyText(text) {
             error
         );
 
+
         showToast(
             "Gagal menyalin."
         );
@@ -2285,7 +2685,7 @@ async function copyText(text) {
 
 
 /* =========================================================
-   30. SHARE
+   31. SHARE
 ========================================================= */
 
 async function shareConversation() {
@@ -2301,23 +2701,27 @@ async function shareConversation() {
         );
 
         return;
+
     }
 
 
     const text =
         conversation.messages
-            .map(message => {
+            .map(
+                message => {
 
-                const label =
-                    message.role === "user"
-                        ? "Pengguna"
-                        : "TugasAI";
+                    const label =
+                        message.role === "user"
+                            ? "Pengguna"
+                            : "TugasAI";
 
-                return (
-                    `${label}:\n${message.content}`
-                );
 
-            })
+                    return (
+                        `${label}:\n${message.content}`
+                    );
+
+                }
+            )
             .join("\n\n");
 
 
@@ -2350,7 +2754,9 @@ async function shareConversation() {
 
         }
 
+
         return;
+
     }
 
 
@@ -2360,7 +2766,7 @@ async function shareConversation() {
 
 
 /* =========================================================
-   31. CONTEXT MENU
+   32. CONTEXT MENU
 ========================================================= */
 
 function showContextMenu(
@@ -2368,6 +2774,13 @@ function showContextMenu(
     y,
     conversationId
 ) {
+
+    if (!DOM.contextMenu) {
+
+        return;
+
+    }
+
 
     state.contextConversationId =
         conversationId;
@@ -2383,6 +2796,7 @@ function showContextMenu(
     const width =
         menu.offsetWidth;
 
+
     const height =
         menu.offsetHeight;
 
@@ -2390,19 +2804,24 @@ function showContextMenu(
     const safeX =
         Math.min(
             x,
-            window.innerWidth - width - 8
+            window.innerWidth -
+                width -
+                8
         );
 
 
     const safeY =
         Math.min(
             y,
-            window.innerHeight - height - 8
+            window.innerHeight -
+                height -
+                8
         );
 
 
     menu.style.left =
         `${Math.max(8, safeX)}px`;
+
 
     menu.style.top =
         `${Math.max(8, safeY)}px`;
@@ -2412,7 +2831,12 @@ function showContextMenu(
 
 function hideContextMenu() {
 
-    DOM.contextMenu.hidden = true;
+    if (DOM.contextMenu) {
+
+        DOM.contextMenu.hidden = true;
+
+    }
+
 
     state.contextConversationId =
         null;
@@ -2427,12 +2851,16 @@ function handleContextAction(action) {
 
 
     if (!id) {
+
         return;
+
     }
 
 
     if (action === "rename") {
+
         renameConversation(id);
+
     }
 
 
@@ -2463,21 +2891,25 @@ function handleContextAction(action) {
 
 
 /* =========================================================
-   32. TOAST
+   33. TOAST
 ========================================================= */
 
 function showToast(message) {
 
     if (!DOM.toastContainer) {
+
         return;
+
     }
 
 
     const toast =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
-    toast.className =
-        "toast";
+
+    toast.className = "toast";
 
     toast.textContent =
         message;
@@ -2491,8 +2923,7 @@ function showToast(message) {
     window.setTimeout(
         () => {
 
-            toast.style.opacity =
-                "0";
+            toast.style.opacity = "0";
 
             toast.style.transform =
                 "translateY(7px)";
@@ -2515,7 +2946,7 @@ function showToast(message) {
 
 
 /* =========================================================
-   33. SCROLL
+   34. SCROLL
 ========================================================= */
 
 function scrollMessagesToBottom(
@@ -2523,7 +2954,9 @@ function scrollMessagesToBottom(
 ) {
 
     if (!DOM.messageList) {
+
         return;
+
     }
 
 
@@ -2543,7 +2976,7 @@ function scrollMessagesToBottom(
 
 
 /* =========================================================
-   34. USER
+   35. USER
 ========================================================= */
 
 function getUserInitial() {
@@ -2562,53 +2995,41 @@ function getUserInitial() {
 
 
 /* =========================================================
-   35. UTILITY
-========================================================= */
-
-function wait(ms) {
-
-    return new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                ms
-            )
-    );
-
-}
-
-
-/* =========================================================
    36. EVENT LISTENERS
 ========================================================= */
 
 function bindEvents() {
 
-    DOM.newChatButton.addEventListener(
+    on(
+        DOM.newChatButton,
         "click",
         startNewChat
     );
 
 
-    DOM.openSidebarButton.addEventListener(
+    on(
+        DOM.openSidebarButton,
         "click",
         openSidebar
     );
 
 
-    DOM.closeSidebarButton.addEventListener(
+    on(
+        DOM.closeSidebarButton,
         "click",
         closeSidebar
     );
 
 
-    DOM.sidebarOverlay.addEventListener(
+    on(
+        DOM.sidebarOverlay,
         "click",
         closeSidebar
     );
 
 
-    DOM.conversationSearch.addEventListener(
+    on(
+        DOM.conversationSearch,
         "input",
         event => {
 
@@ -2620,13 +3041,15 @@ function bindEvents() {
     );
 
 
-    DOM.settingsButton.addEventListener(
+    on(
+        DOM.settingsButton,
         "click",
         openSettings
     );
 
 
-    DOM.themeButton.addEventListener(
+    on(
+        DOM.themeButton,
         "click",
         () => {
 
@@ -2650,7 +3073,8 @@ function bindEvents() {
     );
 
 
-    DOM.themeSelect.addEventListener(
+    on(
+        DOM.themeSelect,
         "change",
         event => {
 
@@ -2662,7 +3086,8 @@ function bindEvents() {
     );
 
 
-    DOM.languageSelect.addEventListener(
+    on(
+        DOM.languageSelect,
         "change",
         event => {
 
@@ -2675,7 +3100,8 @@ function bindEvents() {
     );
 
 
-    DOM.nameInput.addEventListener(
+    on(
+        DOM.nameInput,
         "change",
         event => {
 
@@ -2687,49 +3113,63 @@ function bindEvents() {
     );
 
 
-    document.querySelectorAll(
-        "[data-close-modal]"
-    ).forEach(element => {
+    document
+        .querySelectorAll(
+            "[data-close-modal]"
+        )
+        .forEach(
+            element => {
 
-        element.addEventListener(
-            "click",
-            closeSettings
+                on(
+                    element,
+                    "click",
+                    closeSettings
+                );
+
+            }
         );
 
-    });
 
+    document
+        .querySelectorAll(
+            "[data-close-confirm]"
+        )
+        .forEach(
+            element => {
 
-    document.querySelectorAll(
-        "[data-close-confirm]"
-    ).forEach(element => {
+                on(
+                    element,
+                    "click",
+                    closeConfirmModal
+                );
 
-        element.addEventListener(
-            "click",
-            closeConfirmModal
+            }
         );
 
-    });
 
-
-    DOM.clearHistoryButton.addEventListener(
+    on(
+        DOM.clearHistoryButton,
         "click",
         askClearHistory
     );
 
 
-    DOM.cancelConfirmButton.addEventListener(
+    on(
+        DOM.cancelConfirmButton,
         "click",
         closeConfirmModal
     );
 
 
-    DOM.confirmActionButton.addEventListener(
+    on(
+        DOM.confirmActionButton,
         "click",
         confirmClearHistory
     );
 
 
-    DOM.messageInput.addEventListener(
+    on(
+        DOM.messageInput,
         "input",
         () => {
 
@@ -2741,13 +3181,15 @@ function bindEvents() {
     );
 
 
-    DOM.messageInput.addEventListener(
+    on(
+        DOM.messageInput,
         "keydown",
         handleInputKeydown
     );
 
 
-    DOM.messageForm.addEventListener(
+    on(
+        DOM.messageForm,
         "submit",
         event => {
 
@@ -2759,19 +3201,22 @@ function bindEvents() {
     );
 
 
-    DOM.quickActions.addEventListener(
+    on(
+        DOM.quickActions,
         "click",
         handleQuickAction
     );
 
 
-    DOM.stopButton.addEventListener(
+    on(
+        DOM.stopButton,
         "click",
         stopGenerating
     );
 
 
-    DOM.modelSelectorButton.addEventListener(
+    on(
+        DOM.modelSelectorButton,
         "click",
         event => {
 
@@ -2783,84 +3228,110 @@ function bindEvents() {
     );
 
 
-    DOM.modelMenu
-        .querySelectorAll(
-            ".model-option"
-        )
-        .forEach(option => {
+    if (DOM.modelMenu) {
 
-            option.addEventListener(
-                "click",
-                () => {
+        DOM.modelMenu
+            .querySelectorAll(
+                ".model-option"
+            )
+            .forEach(
+                option => {
 
-                    selectModel(
-                        option.dataset.model
+                    on(
+                        option,
+                        "click",
+                        () => {
+
+                            selectModel(
+                                option.dataset.model
+                            );
+
+                        }
                     );
 
                 }
             );
 
-        });
+    }
 
 
-    DOM.attachButton.addEventListener(
+    on(
+        DOM.attachButton,
         "click",
         openFilePicker
     );
 
 
-    DOM.fileInput.addEventListener(
+    on(
+        DOM.fileInput,
         "change",
         handleFiles
     );
 
 
-    DOM.voiceButton.addEventListener(
+    on(
+        DOM.voiceButton,
         "click",
         startVoiceInput
     );
 
 
-    DOM.shareButton.addEventListener(
+    on(
+        DOM.shareButton,
         "click",
         shareConversation
     );
 
 
-    DOM.profileMenuButton.addEventListener(
+    on(
+        DOM.profileMenuButton,
         "click",
         openSettings
     );
 
 
-    DOM.contextMenu
-        .querySelectorAll(
-            "[data-context-action]"
-        )
-        .forEach(button => {
+    if (DOM.contextMenu) {
 
-            button.addEventListener(
-                "click",
-                () => {
+        DOM.contextMenu
+            .querySelectorAll(
+                "[data-context-action]"
+            )
+            .forEach(
+                button => {
 
-                    handleContextAction(
-                        button.dataset.contextAction
+                    on(
+                        button,
+                        "click",
+                        () => {
+
+                            handleContextAction(
+                                button.dataset.contextAction
+                            );
+
+                        }
                     );
 
                 }
             );
 
-        });
+    }
 
 
-    document.addEventListener(
+    on(
+        document,
         "click",
         event => {
 
             if (
+                DOM.modelMenu &&
                 !DOM.modelMenu.hidden &&
-                !DOM.modelMenu.contains(event.target) &&
-                !DOM.modelSelectorButton.contains(event.target)
+                !DOM.modelMenu.contains(
+                    event.target
+                ) &&
+                DOM.modelSelectorButton &&
+                !DOM.modelSelectorButton.contains(
+                    event.target
+                )
             ) {
 
                 closeModelMenu();
@@ -2869,8 +3340,11 @@ function bindEvents() {
 
 
             if (
+                DOM.contextMenu &&
                 !DOM.contextMenu.hidden &&
-                !DOM.contextMenu.contains(event.target)
+                !DOM.contextMenu.contains(
+                    event.target
+                )
             ) {
 
                 hideContextMenu();
@@ -2881,14 +3355,17 @@ function bindEvents() {
     );
 
 
-    document.addEventListener(
+    on(
+        document,
         "keydown",
         event => {
 
             if (
                 event.key !== "Escape"
             ) {
+
                 return;
+
             }
 
 
@@ -2906,11 +3383,13 @@ function bindEvents() {
     );
 
 
-    window.addEventListener(
+    on(
+        window,
         "resize",
         () => {
 
             autoResizeTextarea();
+
 
             if (
                 window.innerWidth > 700
@@ -2930,21 +3409,27 @@ function bindEvents() {
         );
 
 
-    mediaQuery.addEventListener(
-        "change",
-        () => {
+    if (
+        mediaQuery.addEventListener
+    ) {
 
-            if (
-                state.settings.theme ===
-                "system"
-            ) {
+        mediaQuery.addEventListener(
+            "change",
+            () => {
 
-                applyTheme();
+                if (
+                    state.settings.theme ===
+                    "system"
+                ) {
+
+                    applyTheme();
+
+                }
 
             }
+        );
 
-        }
-    );
+    }
 
 }
 
@@ -2988,7 +3473,8 @@ function initializeApp() {
 
 
     if (
-        !state.activeConversationId
+        !state.activeConversationId &&
+        DOM.welcomeScreen
     ) {
 
         DOM.welcomeScreen.hidden =
