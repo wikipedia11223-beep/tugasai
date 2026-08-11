@@ -1,148 +1,53 @@
 "use strict";
 
-/*
-=========================================================
- TUGASAI — BACKEND SERVER
- Cocok dengan:
- - index.html
- - style.css
- - script.js
-
- Fungsi:
- - Menjalankan server lokal
- - Menyediakan endpoint /api/chat
- - Menerima pesan dari frontend
- - Menyediakan health check
- - Menangani error
- - Siap dikembangkan ke API AI sungguhan
-
- CATATAN:
- API AI BELUM DIPASANG.
- Server ini adalah fondasi backend TugasAI.
-=========================================================
-*/
-
-
-/* =====================================================
-   1. IMPORT
-===================================================== */
-
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
-
-
-/* =====================================================
-   2. CONFIG
-===================================================== */
 
 const CONFIG = {
-
     host: "0.0.0.0",
+    port: Number(process.env.PORT) || 3000,
+    appName: "TugasAI",
+    version: "2.0.0",
+    maxBodySize: 2 * 1024 * 1024,
+    maxMessageLength: 10000,
 
-    port:
-        Number(process.env.PORT) || 3000,
+    openRouterUrl:
+        "https://openrouter.ai/api/v1/chat/completions",
 
-    maxBodySize:
-        2 * 1024 * 1024,
-
-    maxMessageLength:
-        10000,
-
-    appName:
-        "TugasAI",
-
-    version:
-        "1.0.0"
-
+    model:
+        process.env.OPENROUTER_MODEL ||
+        "openai/gpt-5.6"
 };
 
-
-/* =====================================================
-   3. MIME TYPES
-===================================================== */
+const ROOT_DIR = __dirname;
 
 const MIME_TYPES = {
-
-    ".html":
-        "text/html; charset=utf-8",
-
-    ".css":
-        "text/css; charset=utf-8",
-
-    ".js":
-        "application/javascript; charset=utf-8",
-
-    ".json":
-        "application/json; charset=utf-8",
-
-    ".png":
-        "image/png",
-
-    ".jpg":
-        "image/jpeg",
-
-    ".jpeg":
-        "image/jpeg",
-
-    ".webp":
-        "image/webp",
-
-    ".svg":
-        "image/svg+xml",
-
-    ".ico":
-        "image/x-icon",
-
-    ".txt":
-        "text/plain; charset=utf-8"
-
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon"
 };
 
 
 /* =====================================================
-   4. ROOT DIRECTORY
+   RESPONSE
 ===================================================== */
 
-const ROOT_DIR =
-    __dirname;
+function sendJSON(res, status, data) {
 
-
-/* =====================================================
-   5. SECURITY HEADERS
-===================================================== */
-
-function setSecurityHeaders(res) {
+    res.statusCode = status;
 
     res.setHeader(
-        "X-Content-Type-Options",
-        "nosniff"
+        "Content-Type",
+        "application/json; charset=utf-8"
     );
-
-    res.setHeader(
-        "X-Frame-Options",
-        "SAMEORIGIN"
-    );
-
-    res.setHeader(
-        "Referrer-Policy",
-        "strict-origin-when-cross-origin"
-    );
-
-    res.setHeader(
-        "X-XSS-Protection",
-        "0"
-    );
-
-}
-
-
-/* =====================================================
-   6. CORS
-===================================================== */
-
-function setCorsHeaders(res) {
 
     res.setHeader(
         "Access-Control-Allow-Origin",
@@ -159,511 +64,326 @@ function setCorsHeaders(res) {
         "Content-Type, Authorization"
     );
 
+    res.end(JSON.stringify(data));
 }
 
 
 /* =====================================================
-   7. JSON RESPONSE
+   BODY
 ===================================================== */
 
-function sendJSON(
-    res,
-    statusCode,
-    data
-) {
+function readBody(req) {
 
-    setSecurityHeaders(res);
+    return new Promise((resolve, reject) => {
 
-    setCorsHeaders(res);
+        let body = "";
+        let size = 0;
 
-    res.statusCode =
-        statusCode;
+        req.on("data", chunk => {
 
-    res.setHeader(
-        "Content-Type",
-        "application/json; charset=utf-8"
-    );
+            size += chunk.length;
 
-    res.end(
-        JSON.stringify(data)
-    );
+            if (
+                size >
+                CONFIG.maxBodySize
+            ) {
 
+                reject(
+                    new Error(
+                        "REQUEST_TOO_LARGE"
+                    )
+                );
+
+                req.destroy();
+
+                return;
+            }
+
+            body += chunk.toString();
+        });
+
+        req.on("end", () => {
+
+            if (!body) {
+
+                resolve({});
+
+                return;
+            }
+
+            try {
+
+                resolve(JSON.parse(body));
+
+            } catch {
+
+                reject(
+                    new Error(
+                        "INVALID_JSON"
+                    )
+                );
+
+            }
+        });
+
+        req.on("error", reject);
+    });
 }
 
 
 /* =====================================================
-   8. TEXT RESPONSE
+   OPENROUTER
 ===================================================== */
 
-function sendText(
-    res,
-    statusCode,
-    text
-) {
+async function askOpenRouter(message) {
 
-    setSecurityHeaders(res);
+    const apiKey =
+        process.env.OPENROUTER_API_KEY;
 
-    setCorsHeaders(res);
+    if (!apiKey) {
 
-    res.statusCode =
-        statusCode;
+        throw new Error(
+            "OPENROUTER_API_KEY belum dipasang di Render."
+        );
+    }
 
-    res.setHeader(
-        "Content-Type",
-        "text/plain; charset=utf-8"
-    );
 
-    res.end(text);
+    const response =
+        await fetch(
+            CONFIG.openRouterUrl,
+            {
 
+                method: "POST",
+
+                headers: {
+
+                    "Authorization":
+                        `Bearer ${apiKey}`,
+
+                    "Content-Type":
+                        "application/json",
+
+                    "HTTP-Referer":
+                        "https://tugasai.onrender.com",
+
+                    "X-Title":
+                        "TugasAI"
+
+                },
+
+                body:
+                    JSON.stringify({
+
+                        model:
+                            CONFIG.model,
+
+                        messages: [
+
+                            {
+
+                                role:
+                                    "system",
+
+                                content:
+                                    "Kamu adalah TugasAI, asisten AI berbahasa Indonesia. Jawab dengan jelas, akurat, dan membantu."
+
+                            },
+
+                            {
+
+                                role:
+                                    "user",
+
+                                content:
+                                    message
+
+                            }
+
+                        ]
+
+                    })
+
+            }
+        );
+
+
+    const data =
+        await response.json();
+
+
+    if (!response.ok) {
+
+        console.error(
+            "OpenRouter error:",
+            data
+        );
+
+        throw new Error(
+            data?.error?.message ||
+            "OpenRouter gagal memproses permintaan."
+        );
+    }
+
+
+    const reply =
+        data?.choices?.[0]?.message?.content;
+
+
+    if (!reply) {
+
+        throw new Error(
+            "OpenRouter tidak mengembalikan jawaban."
+        );
+    }
+
+
+    return reply;
 }
 
 
 /* =====================================================
-   9. REQUEST BODY
+   CHAT
 ===================================================== */
 
-function readRequestBody(req) {
-
-    return new Promise(
-        (resolve, reject) => {
-
-            let body = "";
-
-            let received =
-                0;
-
-
-            req.on(
-                "data",
-                chunk => {
-
-                    received +=
-                        chunk.length;
-
-
-                    if (
-                        received >
-                        CONFIG.maxBodySize
-                    ) {
-
-                        reject(
-                            new Error(
-                                "REQUEST_TOO_LARGE"
-                            )
-                        );
-
-                        req.destroy();
-
-                        return;
-
-                    }
-
-
-                    body +=
-                        chunk.toString();
-
-                }
-            );
-
-
-            req.on(
-                "end",
-                () => {
-
-                    if (!body) {
-
-                        resolve({});
-
-                        return;
-
-                    }
-
-
-                    try {
-
-                        const parsed =
-                            JSON.parse(body);
-
-                        resolve(parsed);
-
-                    } catch (error) {
-
-                        reject(
-                            new Error(
-                                "INVALID_JSON"
-                            )
-                        );
-
-                    }
-
-                }
-            );
-
-
-            req.on(
-                "error",
-                error => {
-
-                    reject(error);
-
-                }
-            );
-
-        }
-    );
-
-}
-
-
-/* =====================================================
-   10. REQUEST ID
-===================================================== */
-
-function createRequestId() {
-
-    return crypto
-        .randomBytes(8)
-        .toString("hex");
-
-}
-
-
-/* =====================================================
-   11. HEALTH CHECK
-===================================================== */
-
-function handleHealth(req, res) {
-
-    sendJSON(
-        res,
-        200,
-        {
-
-            ok: true,
-
-            app:
-                CONFIG.appName,
-
-            version:
-                CONFIG.version,
-
-            status:
-                "online",
-
-            timestamp:
-                new Date().toISOString()
-
-        }
-    );
-
-}
-
-
-/* =====================================================
-   12. API CHAT
-===================================================== */
-
-async function handleChat(
-    req,
-    res
-) {
-
-    const requestId =
-        createRequestId();
-
-
-    let body;
-
+async function handleChat(req, res) {
 
     try {
 
-        body =
-            await readRequestBody(req);
+        const body =
+            await readBody(req);
 
-    } catch (error) {
 
-        if (
-            error.message ===
-            "REQUEST_TOO_LARGE"
-        ) {
+        const message =
+            typeof body.message === "string"
+                ? body.message.trim()
+                : "";
+
+
+        if (!message) {
 
             sendJSON(
                 res,
-                413,
+                400,
                 {
-
                     ok: false,
-
                     error:
-                        "Ukuran request terlalu besar.",
-
-                    requestId
-
+                        "Pesan tidak boleh kosong."
                 }
             );
 
             return;
-
         }
 
 
         if (
-            error.message ===
-            "INVALID_JSON"
+            message.length >
+            CONFIG.maxMessageLength
         ) {
 
             sendJSON(
                 res,
                 400,
                 {
-
                     ok: false,
-
                     error:
-                        "Format JSON tidak valid.",
-
-                    requestId
-
+                        `Pesan maksimal ${CONFIG.maxMessageLength} karakter.`
                 }
             );
 
             return;
-
         }
+
+
+        console.log(
+            "TugasAI menerima pesan:",
+            message.slice(0, 100)
+        );
+
+
+        const reply =
+            await askOpenRouter(message);
 
 
         sendJSON(
             res,
-            400,
+            200,
+            {
+
+                ok: true,
+
+                model:
+                    CONFIG.model,
+
+                message: {
+
+                    role:
+                        "assistant",
+
+                    content:
+                        reply
+
+                }
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "CHAT ERROR:",
+            error
+        );
+
+
+        sendJSON(
+            res,
+            500,
             {
 
                 ok: false,
 
                 error:
-                    "Request tidak dapat dibaca.",
-
-                requestId
+                    error.message ||
+                    "Terjadi kesalahan pada server."
 
             }
         );
-
-        return;
-
     }
-
-
-    /*
-        Frontend nanti dapat mengirim:
-
-        {
-            "message": "Halo",
-            "conversationId": "...",
-            "model": "default"
-        }
-    */
-
-
-    const message =
-        typeof body.message === "string"
-            ? body.message.trim()
-            : "";
-
-
-    if (!message) {
-
-        sendJSON(
-            res,
-            400,
-            {
-
-                ok: false,
-
-                error:
-                    "Pesan tidak boleh kosong.",
-
-                requestId
-
-            }
-        );
-
-        return;
-
-    }
-
-
-    if (
-        message.length >
-        CONFIG.maxMessageLength
-    ) {
-
-        sendJSON(
-            res,
-            400,
-            {
-
-                ok: false,
-
-                error:
-                    `Pesan maksimal ${CONFIG.maxMessageLength} karakter.`,
-
-                requestId
-
-            }
-        );
-
-        return;
-
-    }
-
-
-    const conversationId =
-        typeof body.conversationId === "string"
-            ? body.conversationId
-            : null;
-
-
-    const model =
-        typeof body.model === "string"
-            ? body.model
-            : "default";
-
-
-    console.log(
-        `[CHAT ${requestId}]`,
-        {
-            conversationId,
-            model,
-            messageLength:
-                message.length
-        }
-    );
-
-
-    /*
-    =====================================================
-     TEMPORARY RESPONSE
-
-     Ini masih respons backend sementara.
-     Belum menghubungkan API AI sungguhan.
-    =====================================================
-    */
-
-
-    const reply =
-        createServerDemoResponse(
-            message
-        );
-
-
-    sendJSON(
-        res,
-        200,
-        {
-
-            ok: true,
-
-            requestId,
-
-            conversationId,
-
-            model,
-
-            message: {
-
-                role:
-                    "assistant",
-
-                content:
-                    reply
-
-            }
-
-        }
-    );
-
 }
 
 
 /* =====================================================
-   13. SERVER DEMO AI
+   STATIC FILES
 ===================================================== */
 
-function createServerDemoResponse(
-    message
-) {
+function serveStatic(req, res) {
 
-    const text =
-        message.toLowerCase();
+    let requestedPath;
 
+    try {
 
-    if (
-        text.includes("halo") ||
-        text.includes("hai") ||
-        text.includes("hello")
-    ) {
+        requestedPath =
+            decodeURIComponent(
+                new URL(
+                    req.url,
+                    `http://${req.headers.host || "localhost"}`
+                ).pathname
+            );
 
-        return (
-            "Halo! Saya TugasAI. " +
-            "Backend TugasAI sudah menerima pesan kamu."
+    } catch {
+
+        sendJSON(
+            res,
+            400,
+            {
+                ok: false,
+                error: "URL tidak valid."
+            }
         );
 
+        return;
     }
-
-
-    if (
-        text.includes("api")
-    ) {
-
-        return (
-            "API adalah penghubung antara aplikasi " +
-            "dengan layanan atau server lain. " +
-            "Backend TugasAI nantinya akan menjadi penghubung " +
-            "antara website dan API AI."
-        );
-
-    }
-
-
-    if (
-        text.includes("server")
-    ) {
-
-        return (
-            "Server TugasAI sedang berjalan. " +
-            "Saat ini backend masih menggunakan respons demo " +
-            "dan belum terhubung ke model AI sungguhan."
-        );
-
-    }
-
-
-    return (
-        "Pesan kamu sudah berhasil diterima oleh " +
-        "server TugasAI:\n\n" +
-        `"${message}"\n\n` +
-        "Backend sudah siap dikembangkan ke tahap " +
-        "integrasi AI sungguhan."
-    );
-
-}
-
-
-/* =====================================================
-   14. STATIC FILE SERVER
-===================================================== */
-
-function serveStaticFile(
-    req,
-    res
-) {
-
-    let requestedPath =
-        decodeURIComponent(
-            new URL(
-                req.url,
-                `http://${req.headers.host || "localhost"}`
-            ).pathname
-        );
 
 
     if (
@@ -672,15 +392,8 @@ function serveStaticFile(
 
         requestedPath =
             "/index.html";
-
     }
 
-
-    /*
-        Mencegah path traversal seperti:
-
-        ../../file
-    */
 
     const safePath =
         path.normalize(
@@ -701,14 +414,16 @@ function serveStaticFile(
         )
     ) {
 
-        sendText(
+        sendJSON(
             res,
             403,
-            "Forbidden"
+            {
+                ok: false,
+                error: "Forbidden"
+            }
         );
 
         return;
-
     }
 
 
@@ -716,29 +431,22 @@ function serveStaticFile(
         filePath,
         (error, stats) => {
 
-            if (error) {
+            if (
+                error ||
+                !stats.isFile()
+            ) {
 
-                sendText(
+                sendJSON(
                     res,
                     404,
-                    "File tidak ditemukan."
+                    {
+                        ok: false,
+                        error:
+                            "File tidak ditemukan."
+                    }
                 );
 
                 return;
-
-            }
-
-
-            if (!stats.isFile()) {
-
-                sendText(
-                    res,
-                    404,
-                    "File tidak ditemukan."
-                );
-
-                return;
-
             }
 
 
@@ -753,14 +461,7 @@ function serveStaticFile(
                 "application/octet-stream";
 
 
-            setSecurityHeaders(res);
-
-            setCorsHeaders(res);
-
-
-            res.statusCode =
-                200;
-
+            res.statusCode = 200;
 
             res.setHeader(
                 "Content-Type",
@@ -768,373 +469,161 @@ function serveStaticFile(
             );
 
 
-            const stream =
-                fs.createReadStream(
-                    filePath
-                );
-
-
-            stream.on(
-                "error",
-                () => {
-
-                    if (!res.headersSent) {
-
-                        sendText(
-                            res,
-                            500,
-                            "Gagal membaca file."
-                        );
-
-                    } else {
-
-                        res.destroy();
-
-                    }
-
-                }
-            );
-
-
-            stream.pipe(res);
-
+            fs.createReadStream(
+                filePath
+            ).pipe(res);
         }
     );
-
 }
 
 
 /* =====================================================
-   15. MAIN REQUEST HANDLER
+   SERVER
 ===================================================== */
 
 const server =
     http.createServer(
         async (req, res) => {
 
-            try {
+            if (
+                req.method === "OPTIONS"
+            ) {
 
-                setSecurityHeaders(res);
+                res.statusCode = 204;
 
-                setCorsHeaders(res);
+                res.end();
 
-
-                const method =
-                    req.method || "GET";
-
-
-                const url =
-                    new URL(
-                        req.url,
-                        `http://${req.headers.host || "localhost"}`
-                    );
+                return;
+            }
 
 
-                const pathname =
-                    url.pathname;
-
-
-                /*
-                -----------------------------------------
-                 OPTIONS / CORS
-                -----------------------------------------
-                */
-
-                if (
-                    method === "OPTIONS"
-                ) {
-
-                    res.statusCode =
-                        204;
-
-                    res.end();
-
-                    return;
-
-                }
-
-
-                /*
-                -----------------------------------------
-                 HEALTH
-                -----------------------------------------
-                */
-
-                if (
-                    method === "GET" &&
-                    pathname === "/api/health"
-                ) {
-
-                    handleHealth(
-                        req,
-                        res
-                    );
-
-                    return;
-
-                }
-
-
-                /*
-                -----------------------------------------
-                 CHAT API
-                -----------------------------------------
-                */
-
-                if (
-                    method === "POST" &&
-                    pathname === "/api/chat"
-                ) {
-
-                    await handleChat(
-                        req,
-                        res
-                    );
-
-                    return;
-
-                }
-
-
-                /*
-                -----------------------------------------
-                 API INFO
-                -----------------------------------------
-                */
-
-                if (
-                    method === "GET" &&
-                    pathname === "/api"
-                ) {
-
-                    sendJSON(
-                        res,
-                        200,
-                        {
-
-                            ok: true,
-
-                            app:
-                                CONFIG.appName,
-
-                            version:
-                                CONFIG.version,
-
-                            endpoints: {
-
-                                health:
-                                    "GET /api/health",
-
-                                chat:
-                                    "POST /api/chat"
-
-                            }
-
-                        }
-                    );
-
-                    return;
-
-                }
-
-
-                /*
-                -----------------------------------------
-                 STATIC WEBSITE
-                -----------------------------------------
-                */
-
-                if (
-                    method === "GET"
-                ) {
-
-                    serveStaticFile(
-                        req,
-                        res
-                    );
-
-                    return;
-
-                }
-
-
-                /*
-                -----------------------------------------
-                 METHOD NOT ALLOWED
-                -----------------------------------------
-                */
-
-                res.setHeader(
-                    "Allow",
-                    "GET, POST, OPTIONS"
+            const url =
+                new URL(
+                    req.url,
+                    `http://${req.headers.host || "localhost"}`
                 );
 
 
+            const pathname =
+                url.pathname;
+
+
+            if (
+                req.method === "GET" &&
+                pathname === "/api/health"
+            ) {
+
                 sendJSON(
                     res,
-                    405,
+                    200,
                     {
 
-                        ok: false,
+                        ok: true,
 
-                        error:
-                            "Method tidak diizinkan."
+                        app:
+                            CONFIG.appName,
+
+                        version:
+                            CONFIG.version,
+
+                        status:
+                            "online",
+
+                        ai:
+                            Boolean(
+                                process.env.OPENROUTER_API_KEY
+                            )
 
                     }
                 );
 
-            } catch (error) {
-
-                console.error(
-                    "SERVER ERROR:",
-                    error
-                );
-
-
-                if (
-                    !res.headersSent
-                ) {
-
-                    sendJSON(
-                        res,
-                        500,
-                        {
-
-                            ok: false,
-
-                            error:
-                                "Terjadi kesalahan pada server."
-
-                        }
-                    );
-
-                } else {
-
-                    res.destroy();
-
-                }
-
+                return;
             }
 
+
+            if (
+                req.method === "POST" &&
+                pathname === "/api/chat"
+            ) {
+
+                await handleChat(
+                    req,
+                    res
+                );
+
+                return;
+            }
+
+
+            if (
+                req.method === "GET" &&
+                pathname === "/api"
+            ) {
+
+                sendJSON(
+                    res,
+                    200,
+                    {
+
+                        ok: true,
+
+                        app:
+                            CONFIG.appName,
+
+                        endpoints: {
+
+                            health:
+                                "GET /api/health",
+
+                            chat:
+                                "POST /api/chat"
+
+                        }
+
+                    }
+                );
+
+                return;
+            }
+
+
+            if (
+                req.method === "GET"
+            ) {
+
+                serveStatic(
+                    req,
+                    res
+                );
+
+                return;
+            }
+
+
+            sendJSON(
+                res,
+                405,
+                {
+
+                    ok: false,
+
+                    error:
+                        "Method tidak diizinkan."
+
+                }
+            );
         }
     );
 
-
-/* =====================================================
-   16. SERVER ERROR
-===================================================== */
-
-server.on(
-    "error",
-    error => {
-
-        if (
-            error.code ===
-            "EADDRINUSE"
-        ) {
-
-            console.error(
-                `Port ${CONFIG.port} sedang digunakan.`
-            );
-
-        } else {
-
-            console.error(
-                "Server error:",
-                error
-            );
-
-        }
-
-    }
-);
-
-
-/* =====================================================
-   17. START SERVER
-===================================================== */
 
 server.listen(
     CONFIG.port,
     CONFIG.host,
     () => {
 
-        console.log("");
         console.log(
-            "=========================================="
+            `${CONFIG.appName} berjalan di port ${CONFIG.port}`
         );
-        console.log(
-            "        TUGASAI SERVER ONLINE"
-        );
-        console.log(
-            "=========================================="
-        );
-
-        console.log(
-            `App     : ${CONFIG.appName}`
-        );
-
-        console.log(
-            `Version : ${CONFIG.version}`
-        );
-
-        console.log(
-            `Port    : ${CONFIG.port}`
-        );
-
-        console.log(
-            `Local   : http://localhost:${CONFIG.port}`
-        );
-
-        console.log(
-            `Health  : http://localhost:${CONFIG.port}/api/health`
-        );
-
-        console.log(
-            "=========================================="
-        );
-
-        console.log("");
 
     }
-);
-
-
-/* =====================================================
-   18. GRACEFUL SHUTDOWN
-===================================================== */
-
-function shutdown(
-    signal
-) {
-
-    console.log(
-        `\n${signal} diterima. Menutup server...`
-    );
-
-
-    server.close(
-        () => {
-
-            console.log(
-                "Server TugasAI berhasil dihentikan."
-            );
-
-            process.exit(0);
-
-        }
-    );
-
-}
-
-
-process.on(
-    "SIGINT",
-    () => shutdown("SIGINT")
-);
-
-
-process.on(
-    "SIGTERM",
-    () => shutdown("SIGTERM")
 );
