@@ -1,6 +1,6 @@
 /* =========================================================
    TUGASAI — MAIN JAVASCRIPT
-   Cocok dengan index.html + style.css
+   Versi diperbaiki — siap terhubung ke backend AI
 ========================================================= */
 
 "use strict";
@@ -21,9 +21,19 @@ const CONFIG = {
 
     maxHistory: 50,
 
-    demoMode: true,
+    /* DEMO DIMATIKAN */
+    demoMode: false,
 
-    typingDelay: 18
+    /*
+       GANTI INI dengan endpoint backend kamu.
+       Contoh:
+       https://domain-backend-kamu.onrender.com/api/chat
+    */
+    apiEndpoint: "",
+
+    typingDelay: 18,
+
+    requestTimeout: 120000
 };
 
 
@@ -47,6 +57,8 @@ const state = {
     pendingFiles: [],
 
     contextConversationId: null,
+
+    abortController: null,
 
     settings: {
         theme: "system",
@@ -161,9 +173,7 @@ function loadData() {
             const parsed = JSON.parse(savedData);
 
             if (Array.isArray(parsed)) {
-
                 state.conversations = parsed;
-
             }
 
         }
@@ -427,9 +437,7 @@ function renameConversation(id) {
         );
 
 
-    if (
-        newTitle === null
-    ) {
+    if (newTitle === null) {
         return;
     }
 
@@ -463,9 +471,7 @@ function renameConversation(id) {
    9. RENDER CONVERSATIONS
 ========================================================= */
 
-function renderConversationList(
-    searchTerm = ""
-) {
+function renderConversationList(searchTerm = "") {
 
     if (!DOM.conversationList) {
         return;
@@ -476,9 +482,7 @@ function renderConversationList(
 
 
     const normalizedSearch =
-        searchTerm
-            .trim()
-            .toLowerCase();
+        searchTerm.trim().toLowerCase();
 
 
     const filtered =
@@ -499,8 +503,12 @@ function renderConversationList(
         );
 
 
-    DOM.emptyConversationState.hidden =
-        filtered.length !== 0;
+    if (DOM.emptyConversationState) {
+
+        DOM.emptyConversationState.hidden =
+            filtered.length !== 0;
+
+    }
 
 
     filtered.forEach(conversation => {
@@ -569,9 +577,7 @@ function renderConversationList(
         );
 
 
-        DOM.conversationList.appendChild(
-            button
-        );
+        DOM.conversationList.appendChild(button);
 
     });
 
@@ -594,6 +600,8 @@ function openConversation(id) {
 
     state.activeConversationId = id;
 
+    state.contextConversationId = id;
+
     saveData();
 
     renderConversationList();
@@ -612,6 +620,11 @@ function openConversation(id) {
 
 function renderActiveConversation() {
 
+    if (!DOM.messageList) {
+        return;
+    }
+
+
     const conversation =
         getActiveConversation();
 
@@ -621,7 +634,9 @@ function renderActiveConversation() {
 
     if (!conversation) {
 
-        DOM.welcomeScreen.hidden = false;
+        if (DOM.welcomeScreen) {
+            DOM.welcomeScreen.hidden = false;
+        }
 
         return;
 
@@ -629,17 +644,22 @@ function renderActiveConversation() {
 
 
     if (
+        !Array.isArray(conversation.messages) ||
         conversation.messages.length === 0
     ) {
 
-        DOM.welcomeScreen.hidden = false;
+        if (DOM.welcomeScreen) {
+            DOM.welcomeScreen.hidden = false;
+        }
 
         return;
 
     }
 
 
-    DOM.welcomeScreen.hidden = true;
+    if (DOM.welcomeScreen) {
+        DOM.welcomeScreen.hidden = true;
+    }
 
 
     conversation.messages.forEach(
@@ -662,10 +682,7 @@ function renderActiveConversation() {
    11. MESSAGE RENDER
 ========================================================= */
 
-function renderMessage(
-    message,
-    scroll = true
-) {
+function renderMessage(message, scroll = true) {
 
     const wrapper =
         document.createElement("article");
@@ -738,21 +755,14 @@ function renderMessage(
             "message-actions";
 
 
-        const copyButton =
+        actions.appendChild(
             createMessageAction(
                 "⧉",
                 "Salin",
-                () => {
+                () => copyText(message.content)
+            )
+        );
 
-                    copyText(
-                        message.content
-                    );
-
-                }
-            );
-
-
-        actions.appendChild(copyButton);
 
         wrapper.appendChild(actions);
 
@@ -836,13 +846,10 @@ function formatMessage(text) {
     codeBlocks.forEach(
         (code, index) => {
 
-            const html =
-                `<pre><code>${code}</code></pre>`;
-
             safe =
                 safe.replace(
                     `@@CODEBLOCK_${index}@@`,
-                    html
+                    `<pre><code>${code}</code></pre>`
                 );
 
         }
@@ -969,7 +976,12 @@ async function handleSendMessage() {
 
     autoResizeTextarea();
 
-    DOM.welcomeScreen.hidden = true;
+    clearAttachments();
+
+
+    if (DOM.welcomeScreen) {
+        DOM.welcomeScreen.hidden = true;
+    }
 
 
     renderMessage(
@@ -984,8 +996,7 @@ async function handleSendMessage() {
 
 
     await generateAssistantResponse(
-        conversation,
-        text
+        conversation
     );
 
 }
@@ -996,34 +1007,31 @@ async function handleSendMessage() {
 ========================================================= */
 
 async function generateAssistantResponse(
-    conversation,
-    userText
+    conversation
 ) {
 
     state.isGenerating = true;
 
     state.generationStopped = false;
 
+    state.abortController =
+        new AbortController();
+
+
     updateGeneratingUI(true);
 
 
     try {
 
-        if (CONFIG.demoMode) {
+        /*
+         * MODE DEMO SUDAH DIMATIKAN.
+         * Semua pesan sekarang diarahkan
+         * ke backend AI.
+         */
 
-            await generateDemoResponse(
-                conversation,
-                userText
-            );
-
-        } else {
-
-            await generateAPIResponse(
-                conversation,
-                userText
-            );
-
-        }
+        await generateAPIResponse(
+            conversation
+        );
 
     } catch (error) {
 
@@ -1033,7 +1041,23 @@ async function generateAssistantResponse(
         );
 
 
-        if (!state.generationStopped) {
+        if (
+            !state.generationStopped
+        ) {
+
+            let errorText =
+                "Maaf, terjadi kesalahan saat menghubungkan ke AI.";
+
+            if (
+                error &&
+                error.message
+            ) {
+
+                errorText =
+                    error.message;
+
+            }
+
 
             const errorMessage = {
 
@@ -1041,8 +1065,7 @@ async function generateAssistantResponse(
 
                 role: "assistant",
 
-                content:
-                    "Maaf, terjadi kesalahan saat memproses pesan. Silakan coba lagi.",
+                content: errorText,
 
                 createdAt: Date.now()
 
@@ -1059,6 +1082,9 @@ async function generateAssistantResponse(
                 true
             );
 
+
+            saveData();
+
         }
 
     } finally {
@@ -1066,6 +1092,8 @@ async function generateAssistantResponse(
         state.isGenerating = false;
 
         state.generationTimer = null;
+
+        state.abortController = null;
 
         updateGeneratingUI(false);
 
@@ -1079,262 +1107,329 @@ async function generateAssistantResponse(
 
 
 /* =========================================================
-   15. DEMO RESPONSE
+   15. REAL API
 ========================================================= */
 
-async function generateDemoResponse(
-    conversation,
-    userText
+async function generateAPIResponse(
+    conversation
 ) {
 
-    const response =
-        createDemoResponse(userText);
+    if (
+        !CONFIG.apiEndpoint ||
+        !CONFIG.apiEndpoint.trim()
+    ) {
+
+        throw new Error(
+            "Backend AI belum terhubung. Isi CONFIG.apiEndpoint dengan alamat backend TugasAI."
+        );
+
+    }
 
 
-    const assistantMessage = {
+    /*
+     * Kirim seluruh riwayat percakapan.
+     * Ini yang membuat backend/model bisa
+     * menerima konteks percakapan sebelumnya.
+     */
 
-        id: createId("message"),
-
-        role: "assistant",
-
-        content: "",
-
-        createdAt: Date.now()
-
-    };
-
-
-    conversation.messages.push(
-        assistantMessage
-    );
+    const messages =
+        conversation.messages.map(
+            message => ({
+                role: message.role,
+                content: message.content
+            })
+        );
 
 
-    const wrapper =
+    const controller =
+        state.abortController ||
+        new AbortController();
+
+
+    const timeout =
+        setTimeout(
+            () => controller.abort(),
+            CONFIG.requestTimeout
+        );
+
+
+    try {
+
+        const response =
+            await fetch(
+                CONFIG.apiEndpoint,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+
+                        "Accept":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        model:
+                            state.selectedModel,
+
+                        messages,
+
+                        conversationId:
+                            conversation.id,
+
+                        user: {
+                            name:
+                                state.settings.name,
+
+                            language:
+                                state.settings.language
+                        }
+
+                    }),
+
+                    signal:
+                        controller.signal
+
+                }
+            );
+
+
+        if (!response.ok) {
+
+            let serverMessage = "";
+
+            try {
+
+                const errorData =
+                    await response.json();
+
+                serverMessage =
+                    errorData.error ||
+                    errorData.message ||
+                    "";
+
+            } catch (_) {}
+
+
+            throw new Error(
+                serverMessage ||
+                `Backend AI mengembalikan HTTP ${response.status}.`
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        /*
+         * Mendukung beberapa format respons backend.
+         */
+
+        const answer =
+            extractAIAnswer(data);
+
+
+        if (!answer) {
+
+            throw new Error(
+                "Backend berhasil merespons, tetapi tidak mengirim jawaban AI."
+            );
+
+        }
+
+
+        const assistantMessage = {
+
+            id: createId("message"),
+
+            role: "assistant",
+
+            content: answer,
+
+            createdAt: Date.now()
+
+        };
+
+
+        conversation.messages.push(
+            assistantMessage
+        );
+
+
+        conversation.updatedAt =
+            Date.now();
+
+
         renderMessage(
             assistantMessage,
             true
         );
 
 
-    const content =
-        wrapper.querySelector(
-            ".message-content"
-        );
+        saveData();
+
+    } finally {
+
+        clearTimeout(timeout);
+
+    }
+
+}
 
 
-    for (
-        let i = 0;
-        i < response.length;
-        i++
+/* =========================================================
+   16. EXTRACT AI RESPONSE
+========================================================= */
+
+function extractAIAnswer(data) {
+
+    if (!data) {
+        return "";
+    }
+
+
+    /*
+     * Format sederhana:
+     * { "answer": "..." }
+     */
+
+    if (
+        typeof data.answer === "string"
     ) {
 
+        return data.answer.trim();
+
+    }
+
+
+    /*
+     * Format:
+     * { "message": "..." }
+     */
+
+    if (
+        typeof data.message === "string"
+    ) {
+
+        return data.message.trim();
+
+    }
+
+
+    /*
+     * Format OpenAI-compatible:
+     * { choices: [{ message: { content: "..." }}] }
+     */
+
+    if (
+        Array.isArray(data.choices) &&
+        data.choices[0]
+    ) {
+
+        const choice =
+            data.choices[0];
+
+
         if (
-            state.generationStopped
+            choice.message &&
+            typeof choice.message.content ===
+                "string"
         ) {
 
-            assistantMessage.content +=
-                "\n\n[Jawaban dihentikan]";
-
-            break;
+            return choice.message.content.trim();
 
         }
 
 
-        assistantMessage.content +=
-            response[i];
+        if (
+            typeof choice.text === "string"
+        ) {
 
+            return choice.text.trim();
 
-        content.innerHTML =
-            formatMessage(
-                assistantMessage.content
-            );
-
-
-        scrollMessagesToBottom(true);
-
-
-        await wait(
-            CONFIG.typingDelay
-        );
+        }
 
     }
 
-
-    saveData();
-
-}
-
-
-/* =========================================================
-   16. DEMO AI LOGIC
-========================================================= */
-
-function createDemoResponse(text) {
-
-    const lower =
-        text.toLowerCase();
-
-
-    if (
-        lower.includes("halo") ||
-        lower.includes("hai") ||
-        lower.includes("hello")
-    ) {
-
-        return (
-            "Halo! Saya TugasAI. " +
-            "Ada yang ingin kamu kerjakan?"
-        );
-
-    }
-
-
-    if (
-        lower.includes("html") ||
-        lower.includes("css") ||
-        lower.includes("javascript") ||
-        lower.includes("js")
-    ) {
-
-        return (
-            "Bisa. Untuk pengembangan web, " +
-            "HTML digunakan untuk struktur, CSS untuk tampilan, " +
-            "dan JavaScript untuk membuat interaksi serta fungsi aplikasi.\n\n" +
-            "Kalau nanti TugasAI dihubungkan ke API AI, " +
-            "JavaScript pada sisi aplikasi akan berkomunikasi " +
-            "dengan backend secara aman."
-        );
-
-    }
-
-
-    if (
-        lower.includes("api")
-    ) {
-
-        return (
-            "API adalah penghubung antara aplikasi dan layanan lain. " +
-            "Pada TugasAI, API nantinya dapat digunakan untuk " +
-            "mengirim pesan ke model AI dan menerima jawabannya kembali.\n\n" +
-            "Untuk aplikasi yang dipakai banyak orang, API key " +
-            "sebaiknya tidak diletakkan langsung di JavaScript browser."
-        );
-
-    }
-
-
-    if (
-        lower.includes("siapa kamu") ||
-        lower.includes("kamu siapa")
-    ) {
-
-        return (
-            "Saya adalah asisten AI di dalam TugasAI. " +
-            "Saat ini saya masih menggunakan mode demo. " +
-            "Setelah backend dan API AI dipasang, responsnya dapat " +
-            "berasal dari model AI sungguhan."
-        );
-
-    }
-
-
-    if (
-        lower.includes("terima kasih") ||
-        lower.includes("makasih")
-    ) {
-
-        return (
-            "Sama-sama. Silakan lanjutkan kalau ada yang ingin dikerjakan."
-        );
-
-    }
-
-
-    return (
-        "Saya menerima pesan kamu:\n\n" +
-        `"${text}"\n\n` +
-        "Saat ini TugasAI sedang berjalan dalam mode demo. " +
-        "Struktur aplikasinya sudah disiapkan agar nantinya " +
-        "bisa dihubungkan ke backend dan API AI sungguhan."
-    );
-
-}
-
-
-/* =========================================================
-   17. REAL API PLACEHOLDER
-========================================================= */
-
-async function generateAPIResponse(
-    conversation,
-    userText
-) {
 
     /*
-        BAGIAN INI SENGAJA BELUM MEMAKAI API.
+     * Format:
+     * { "content": "..." }
+     */
 
-        Nanti alurnya:
+    if (
+        typeof data.content === "string"
+    ) {
 
-        Browser
-           ↓
-        Backend TugasAI
-           ↓
-        API AI
-           ↓
-        Backend
-           ↓
-        Browser
+        return data.content.trim();
 
-        Jangan menaruh API key rahasia langsung
-        di file JavaScript browser.
-    */
+    }
 
 
-    throw new Error(
-        "API belum dikonfigurasi."
-    );
+    return "";
+
 }
 
 
 /* =========================================================
-   18. GENERATION UI
+   17. GENERATION UI
 ========================================================= */
 
 function updateGeneratingUI(isGenerating) {
 
-    DOM.generatingIndicator.hidden =
-        !isGenerating;
+    if (DOM.generatingIndicator) {
 
-    DOM.sendButton.hidden =
-        isGenerating;
+        DOM.generatingIndicator.hidden =
+            !isGenerating;
 
-    DOM.stopButton.hidden =
-        !isGenerating;
+    }
 
 
-    DOM.messageInput.disabled =
-        isGenerating;
+    if (DOM.sendButton) {
+
+        DOM.sendButton.hidden =
+            isGenerating;
+
+    }
 
 
-    DOM.attachButton.disabled =
-        isGenerating;
+    if (DOM.stopButton) {
+
+        DOM.stopButton.hidden =
+            !isGenerating;
+
+    }
 
 
-    DOM.voiceButton.disabled =
-        isGenerating;
+    if (DOM.messageInput) {
 
-
-    if (isGenerating) {
+        DOM.messageInput.disabled =
+            isGenerating;
 
         DOM.messageInput.placeholder =
-            "Tunggu jawaban selesai...";
+            isGenerating
+                ? "Tunggu jawaban selesai..."
+                : "Tulis pesan...";
 
-    } else {
+    }
 
-        DOM.messageInput.placeholder =
-            "Tulis pesan...";
 
-        DOM.messageInput.disabled = false;
+    if (DOM.attachButton) {
+
+        DOM.attachButton.disabled =
+            isGenerating;
+
+    }
+
+
+    if (DOM.voiceButton) {
+
+        DOM.voiceButton.disabled =
+            isGenerating;
 
     }
 
@@ -1342,7 +1437,7 @@ function updateGeneratingUI(isGenerating) {
 
 
 /* =========================================================
-   19. STOP GENERATING
+   18. STOP GENERATING
 ========================================================= */
 
 function stopGenerating() {
@@ -1366,6 +1461,15 @@ function stopGenerating() {
     }
 
 
+    if (state.abortController) {
+
+        state.abortController.abort();
+
+        state.abortController = null;
+
+    }
+
+
     showToast(
         "Pembuatan jawaban dihentikan."
     );
@@ -1374,31 +1478,40 @@ function stopGenerating() {
 
 
 /* =========================================================
-   20. TEXTAREA
+   19. TEXTAREA
 ========================================================= */
 
 function updateCharacterCounter() {
+
+    if (!DOM.messageInput) {
+        return;
+    }
+
 
     const length =
         DOM.messageInput.value.length;
 
 
-    DOM.characterCounter.textContent =
-        `${length} / ${CONFIG.maxCharacters}`;
+    if (DOM.characterCounter) {
+
+        DOM.characterCounter.textContent =
+            `${length} / ${CONFIG.maxCharacters}`;
 
 
-    if (
-        length >
-        CONFIG.maxCharacters * 0.9
-    ) {
+        if (
+            length >
+            CONFIG.maxCharacters * 0.9
+        ) {
 
-        DOM.characterCounter.style.color =
-            "#ff8b91";
+            DOM.characterCounter.style.color =
+                "#ff8b91";
 
-    } else {
+        } else {
 
-        DOM.characterCounter.style.color =
-            "";
+            DOM.characterCounter.style.color =
+                "";
+
+        }
 
     }
 
@@ -1406,6 +1519,11 @@ function updateCharacterCounter() {
 
 
 function autoResizeTextarea() {
+
+    if (!DOM.messageInput) {
+        return;
+    }
+
 
     const textarea =
         DOM.messageInput;
@@ -1429,7 +1547,7 @@ function autoResizeTextarea() {
 
 
 /* =========================================================
-   21. KEYBOARD
+   20. KEYBOARD
 ========================================================= */
 
 function handleInputKeydown(event) {
@@ -1451,7 +1569,7 @@ function handleInputKeydown(event) {
 
 
 /* =========================================================
-   22. QUICK ACTIONS
+   21. QUICK ACTIONS
 ========================================================= */
 
 function handleQuickAction(event) {
@@ -1490,7 +1608,7 @@ function handleQuickAction(event) {
 
 
 /* =========================================================
-   23. NEW CHAT
+   22. NEW CHAT
 ========================================================= */
 
 function startNewChat() {
@@ -1531,7 +1649,7 @@ function startNewChat() {
 
 
 /* =========================================================
-   24. SIDEBAR
+   23. SIDEBAR
 ========================================================= */
 
 function openSidebar() {
@@ -1559,7 +1677,7 @@ function closeSidebar() {
 
 
 /* =========================================================
-   25. MODEL MENU
+   24. MODEL MENU
 ========================================================= */
 
 function toggleModelMenu() {
@@ -1633,7 +1751,7 @@ function selectModel(model) {
 
 
 /* =========================================================
-   26. SETTINGS
+   25. SETTINGS
 ========================================================= */
 
 function openSettings() {
@@ -1731,7 +1849,7 @@ function updateName(name) {
 
 
 /* =========================================================
-   27. CLEAR HISTORY
+   26. CLEAR HISTORY
 ========================================================= */
 
 function askClearHistory() {
@@ -1782,7 +1900,7 @@ function confirmClearHistory() {
 
 
 /* =========================================================
-   28. FILE ATTACHMENT
+   27. FILE ATTACHMENT
 ========================================================= */
 
 function openFilePicker() {
@@ -1988,7 +2106,7 @@ function clearAttachments() {
 
 
 /* =========================================================
-   29. VOICE INPUT
+   28. VOICE INPUT
 ========================================================= */
 
 function startVoiceInput() {
@@ -2028,9 +2146,6 @@ function startVoiceInput() {
     recognition.continuous = false;
 
 
-    let finalText = "";
-
-
     recognition.onstart = () => {
 
         DOM.voiceButton.style.background =
@@ -2063,11 +2178,8 @@ function startVoiceInput() {
             }
 
 
-            finalText = transcript;
-
-
             DOM.messageInput.value =
-                finalText;
+                transcript;
 
             updateCharacterCounter();
 
@@ -2108,7 +2220,7 @@ function startVoiceInput() {
 
 
 /* =========================================================
-   30. COPY
+   29. COPY
 ========================================================= */
 
 async function copyText(text) {
@@ -2173,7 +2285,7 @@ async function copyText(text) {
 
 
 /* =========================================================
-   31. SHARE
+   30. SHARE
 ========================================================= */
 
 async function shareConversation() {
@@ -2209,9 +2321,7 @@ async function shareConversation() {
             .join("\n\n");
 
 
-    if (
-        navigator.share
-    ) {
+    if (navigator.share) {
 
         try {
 
@@ -2246,15 +2356,11 @@ async function shareConversation() {
 
     await copyText(text);
 
-    showToast(
-        "Percakapan disalin karena fitur berbagi tidak tersedia."
-    );
-
 }
 
 
 /* =========================================================
-   32. CONTEXT MENU
+   31. CONTEXT MENU
 ========================================================= */
 
 function showContextMenu(
@@ -2314,9 +2420,7 @@ function hideContextMenu() {
 }
 
 
-function handleContextAction(
-    action
-) {
+function handleContextAction(action) {
 
     const id =
         state.contextConversationId;
@@ -2328,9 +2432,7 @@ function handleContextAction(
 
 
     if (action === "rename") {
-
         renameConversation(id);
-
     }
 
 
@@ -2361,10 +2463,15 @@ function handleContextAction(
 
 
 /* =========================================================
-   33. TOAST
+   32. TOAST
 ========================================================= */
 
 function showToast(message) {
+
+    if (!DOM.toastContainer) {
+        return;
+    }
+
 
     const toast =
         document.createElement("div");
@@ -2408,7 +2515,7 @@ function showToast(message) {
 
 
 /* =========================================================
-   34. SCROLL
+   33. SCROLL
 ========================================================= */
 
 function scrollMessagesToBottom(
@@ -2436,7 +2543,7 @@ function scrollMessagesToBottom(
 
 
 /* =========================================================
-   35. USER
+   34. USER
 ========================================================= */
 
 function getUserInitial() {
@@ -2455,7 +2562,7 @@ function getUserInitial() {
 
 
 /* =========================================================
-   36. UTILITY
+   35. UTILITY
 ========================================================= */
 
 function wait(ms) {
@@ -2472,24 +2579,16 @@ function wait(ms) {
 
 
 /* =========================================================
-   37. EVENT LISTENERS
+   36. EVENT LISTENERS
 ========================================================= */
 
 function bindEvents() {
-
-    /* -----------------------------------------
-       New conversation
-    ----------------------------------------- */
 
     DOM.newChatButton.addEventListener(
         "click",
         startNewChat
     );
 
-
-    /* -----------------------------------------
-       Sidebar
-    ----------------------------------------- */
 
     DOM.openSidebarButton.addEventListener(
         "click",
@@ -2509,10 +2608,6 @@ function bindEvents() {
     );
 
 
-    /* -----------------------------------------
-       Search
-    ----------------------------------------- */
-
     DOM.conversationSearch.addEventListener(
         "input",
         event => {
@@ -2524,10 +2619,6 @@ function bindEvents() {
         }
     );
 
-
-    /* -----------------------------------------
-       Settings
-    ----------------------------------------- */
 
     DOM.settingsButton.addEventListener(
         "click",
@@ -2596,10 +2687,6 @@ function bindEvents() {
     );
 
 
-    /* -----------------------------------------
-       Modal close
-    ----------------------------------------- */
-
     document.querySelectorAll(
         "[data-close-modal]"
     ).forEach(element => {
@@ -2624,10 +2711,6 @@ function bindEvents() {
     });
 
 
-    /* -----------------------------------------
-       Clear history
-    ----------------------------------------- */
-
     DOM.clearHistoryButton.addEventListener(
         "click",
         askClearHistory
@@ -2645,10 +2728,6 @@ function bindEvents() {
         confirmClearHistory
     );
 
-
-    /* -----------------------------------------
-       Input
-    ----------------------------------------- */
 
     DOM.messageInput.addEventListener(
         "input",
@@ -2680,29 +2759,17 @@ function bindEvents() {
     );
 
 
-    /* -----------------------------------------
-       Quick actions
-    ----------------------------------------- */
-
     DOM.quickActions.addEventListener(
         "click",
         handleQuickAction
     );
 
 
-    /* -----------------------------------------
-       Stop
-    ----------------------------------------- */
-
     DOM.stopButton.addEventListener(
         "click",
         stopGenerating
     );
 
-
-    /* -----------------------------------------
-       Model
-    ----------------------------------------- */
 
     DOM.modelSelectorButton.addEventListener(
         "click",
@@ -2736,10 +2803,6 @@ function bindEvents() {
         });
 
 
-    /* -----------------------------------------
-       Attachment
-    ----------------------------------------- */
-
     DOM.attachButton.addEventListener(
         "click",
         openFilePicker
@@ -2752,19 +2815,11 @@ function bindEvents() {
     );
 
 
-    /* -----------------------------------------
-       Voice
-    ----------------------------------------- */
-
     DOM.voiceButton.addEventListener(
         "click",
         startVoiceInput
     );
 
-
-    /* -----------------------------------------
-       Share
-    ----------------------------------------- */
 
     DOM.shareButton.addEventListener(
         "click",
@@ -2772,19 +2827,11 @@ function bindEvents() {
     );
 
 
-    /* -----------------------------------------
-       Profile
-    ----------------------------------------- */
-
     DOM.profileMenuButton.addEventListener(
         "click",
         openSettings
     );
 
-
-    /* -----------------------------------------
-       Context menu
-    ----------------------------------------- */
 
     DOM.contextMenu
         .querySelectorAll(
@@ -2805,10 +2852,6 @@ function bindEvents() {
 
         });
 
-
-    /* -----------------------------------------
-       Close floating elements
-    ----------------------------------------- */
 
     document.addEventListener(
         "click",
@@ -2838,10 +2881,6 @@ function bindEvents() {
     );
 
 
-    /* -----------------------------------------
-       Escape
-    ----------------------------------------- */
-
     document.addEventListener(
         "keydown",
         event => {
@@ -2867,10 +2906,6 @@ function bindEvents() {
     );
 
 
-    /* -----------------------------------------
-       Window resize
-    ----------------------------------------- */
-
     window.addEventListener(
         "resize",
         () => {
@@ -2888,10 +2923,6 @@ function bindEvents() {
         }
     );
 
-
-    /* -----------------------------------------
-       System theme
-    ----------------------------------------- */
 
     const mediaQuery =
         window.matchMedia(
@@ -2919,7 +2950,7 @@ function bindEvents() {
 
 
 /* =========================================================
-   38. INITIAL UI
+   37. INITIAL UI
 ========================================================= */
 
 function initializeUI() {
@@ -2942,7 +2973,7 @@ function initializeUI() {
 
 
 /* =========================================================
-   39. APPLICATION START
+   38. APPLICATION START
 ========================================================= */
 
 function initializeApp() {
@@ -2955,11 +2986,6 @@ function initializeApp() {
 
     initializeUI();
 
-
-    /*
-        Kalau belum ada percakapan,
-        tampilkan welcome screen.
-    */
 
     if (
         !state.activeConversationId
@@ -2979,7 +3005,7 @@ function initializeApp() {
 
 
 /* =========================================================
-   40. START
+   39. START
 ========================================================= */
 
 if (
