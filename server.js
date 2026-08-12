@@ -17,7 +17,11 @@ const CONFIG = {
 
     model:
         process.env.OPENROUTER_MODEL ||
-        "openai/gpt-5.6"
+        "openai/gpt-5.6",
+
+    appUrl:
+        process.env.APP_URL ||
+        "https://tugasai-production.up.railway.app"
 };
 
 const ROOT_DIR = __dirname;
@@ -140,10 +144,13 @@ async function askOpenRouter(message) {
     const apiKey =
         process.env.OPENROUTER_API_KEY;
 
-    if (!apiKey) {
+    if (
+        typeof apiKey !== "string" ||
+        !apiKey.trim()
+    ) {
 
         throw new Error(
-            "OPENROUTER_API_KEY belum dipasang di Render."
+            "OPENROUTER_API_KEY belum tersedia di Railway Variables."
         );
     }
 
@@ -158,13 +165,13 @@ async function askOpenRouter(message) {
                 headers: {
 
                     "Authorization":
-                        `Bearer ${apiKey}`,
+                        `Bearer ${apiKey.trim()}`,
 
                     "Content-Type":
                         "application/json",
 
                     "HTTP-Referer":
-                        "https://tugasai.onrender.com",
+                        CONFIG.appUrl,
 
                     "X-Title":
                         "TugasAI"
