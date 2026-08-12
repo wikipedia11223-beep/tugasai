@@ -25,8 +25,8 @@ const CONFIG = {
 
     /*
      * Backend Railway.
-     * Karena server.js dan frontend berada
-     * dalam service yang sama, gunakan relative URL.
+     * Frontend dan server.js berada
+     * dalam service yang sama.
      */
     apiEndpoint: "/api/chat",
 
@@ -71,7 +71,7 @@ const state = {
    3. DOM HELPER
 ========================================================= */
 
-const $ = id => document.getElementById(id);
+const $ = (id) => document.getElementById(id);
 
 const DOM = {};
 
@@ -153,21 +153,7 @@ function cacheDOM() {
 
 
 /* =========================================================
-   5. SAFE EVENT HELPER
-========================================================= */
-
-function on(element, event, handler) {
-
-    if (!element) {
-        return;
-    }
-
-    element.addEventListener(event, handler);
-}
-
-
-/* =========================================================
-   6. STORAGE
+   5. STORAGE
 ========================================================= */
 
 function loadData() {
@@ -221,7 +207,6 @@ function loadData() {
         );
 
     }
-
 }
 
 
@@ -242,7 +227,6 @@ function saveData() {
         );
 
     }
-
 }
 
 
@@ -263,12 +247,11 @@ function saveSettings() {
         );
 
     }
-
 }
 
 
 /* =========================================================
-   7. ID
+   6. ID GENERATOR
 ========================================================= */
 
 function createId(prefix = "id") {
@@ -282,12 +265,11 @@ function createId(prefix = "id") {
             .toString(36)
             .slice(2, 9)
     );
-
 }
 
 
 /* =========================================================
-   8. DATE
+   7. DATE
 ========================================================= */
 
 function getDateLabel(timestamp) {
@@ -298,18 +280,14 @@ function getDateLabel(timestamp) {
 
     const yesterday = new Date();
 
-    yesterday.setDate(
-        today.getDate() - 1
-    );
+    yesterday.setDate(today.getDate() - 1);
 
 
     if (
         date.toDateString() ===
         today.toDateString()
     ) {
-
         return "Hari ini";
-
     }
 
 
@@ -317,9 +295,7 @@ function getDateLabel(timestamp) {
         date.toDateString() ===
         yesterday.toDateString()
     ) {
-
         return "Kemarin";
-
     }
 
 
@@ -330,12 +306,11 @@ function getDateLabel(timestamp) {
             month: "short"
         }
     );
-
 }
 
 
 /* =========================================================
-   9. CONVERSATION
+   8. CONVERSATION
 ========================================================= */
 
 function createConversation(firstMessage = "") {
@@ -360,9 +335,7 @@ function createConversation(firstMessage = "") {
     };
 
 
-    state.conversations.unshift(
-        conversation
-    );
+    state.conversations.unshift(conversation);
 
     state.activeConversationId =
         conversation.id;
@@ -377,29 +350,22 @@ function createConversation(firstMessage = "") {
     renderActiveConversation();
 
     return conversation;
-
 }
 
 
 function createConversationTitle(text) {
 
-    const clean =
-        String(text)
-            .replace(/\s+/g, " ")
-            .trim();
-
+    const clean = String(text)
+        .replace(/\s+/g, " ")
+        .trim();
 
     if (!clean) {
-
         return "Percakapan baru";
-
     }
-
 
     return clean.length > 42
         ? clean.slice(0, 42).trim() + "..."
         : clean;
-
 }
 
 
@@ -410,7 +376,6 @@ function getActiveConversation() {
             conversation.id ===
             state.activeConversationId
     ) || null;
-
 }
 
 
@@ -428,7 +393,6 @@ function trimConversationHistory() {
             );
 
     }
-
 }
 
 
@@ -458,7 +422,6 @@ function deleteConversation(id) {
     renderConversationList();
 
     renderActiveConversation();
-
 }
 
 
@@ -471,9 +434,7 @@ function renameConversation(id) {
 
 
     if (!conversation) {
-
         return;
-
     }
 
 
@@ -484,10 +445,10 @@ function renameConversation(id) {
         );
 
 
-    if (newTitle === null) {
-
+    if (
+        newTitle === null
+    ) {
         return;
-
     }
 
 
@@ -496,13 +457,8 @@ function renameConversation(id) {
 
 
     if (!cleanTitle) {
-
-        showToast(
-            "Nama tidak boleh kosong."
-        );
-
+        showToast("Nama tidak boleh kosong.");
         return;
-
     }
 
 
@@ -517,15 +473,12 @@ function renameConversation(id) {
 
     renderConversationList();
 
-    showToast(
-        "Nama percakapan diperbarui."
-    );
-
+    showToast("Nama percakapan diperbarui.");
 }
 
 
 /* =========================================================
-   10. RENDER CONVERSATIONS
+   9. RENDER CONVERSATIONS
 ========================================================= */
 
 function renderConversationList(
@@ -533,9 +486,7 @@ function renderConversationList(
 ) {
 
     if (!DOM.conversationList) {
-
         return;
-
     }
 
 
@@ -553,19 +504,14 @@ function renderConversationList(
             conversation => {
 
                 if (!normalizedSearch) {
-
                     return true;
-
                 }
-
 
                 return String(
                     conversation.title || ""
                 )
                     .toLowerCase()
-                    .includes(
-                        normalizedSearch
-                    );
+                    .includes(normalizedSearch);
 
             }
         );
@@ -579,91 +525,78 @@ function renderConversationList(
     }
 
 
-    filtered.forEach(
-        conversation => {
+    filtered.forEach(conversation => {
 
-            const button =
-                document.createElement(
-                    "button"
-                );
+        const button =
+            document.createElement("button");
 
+        button.type = "button";
 
-            button.type = "button";
-
-            button.className =
-                "conversation-item";
+        button.className =
+            "conversation-item";
 
 
-            if (
-                conversation.id ===
-                state.activeConversationId
-            ) {
+        if (
+            conversation.id ===
+            state.activeConversationId
+        ) {
 
-                button.classList.add(
-                    "active"
+            button.classList.add("active");
+
+        }
+
+
+        button.dataset.conversationId =
+            conversation.id;
+
+
+        const title =
+            document.createElement("span");
+
+        title.className =
+            "conversation-item-title";
+
+        title.textContent =
+            conversation.title ||
+            "Percakapan baru";
+
+
+        button.appendChild(title);
+
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                openConversation(
+                    conversation.id
                 );
 
             }
+        );
 
 
-            button.dataset.conversationId =
-                conversation.id;
+        button.addEventListener(
+            "contextmenu",
+            event => {
 
+                event.preventDefault();
 
-            const title =
-                document.createElement(
-                    "span"
+                showContextMenu(
+                    event.clientX,
+                    event.clientY,
+                    conversation.id
                 );
 
-
-            title.className =
-                "conversation-item-title";
-
-
-            title.textContent =
-                conversation.title ||
-                "Percakapan baru";
+            }
+        );
 
 
-            button.appendChild(title);
+        DOM.conversationList.appendChild(
+            button
+        );
 
-
-            on(
-                button,
-                "click",
-                () => {
-
-                    openConversation(
-                        conversation.id
-                    );
-
-                }
-            );
-
-
-            on(
-                button,
-                "contextmenu",
-                event => {
-
-                    event.preventDefault();
-
-                    showContextMenu(
-                        event.clientX,
-                        event.clientY,
-                        conversation.id
-                    );
-
-                }
-            );
-
-
-            DOM.conversationList.appendChild(
-                button
-            );
-
-        }
-    );
+    });
 
 }
 
@@ -678,9 +611,7 @@ function openConversation(id) {
 
 
     if (!exists) {
-
         return;
-
     }
 
 
@@ -697,22 +628,14 @@ function openConversation(id) {
     closeSidebar();
 
     scrollMessagesToBottom(false);
-
 }
 
 
 /* =========================================================
-   11. ACTIVE CHAT
+   10. RENDER ACTIVE CHAT
 ========================================================= */
 
 function renderActiveConversation() {
-
-    if (!DOM.messageList) {
-
-        return;
-
-    }
-
 
     const conversation =
         getActiveConversation();
@@ -723,11 +646,7 @@ function renderActiveConversation() {
 
     if (!conversation) {
 
-        if (DOM.welcomeScreen) {
-
-            DOM.welcomeScreen.hidden = false;
-
-        }
+        DOM.welcomeScreen.hidden = false;
 
         return;
 
@@ -735,28 +654,18 @@ function renderActiveConversation() {
 
 
     if (
-        !Array.isArray(
-            conversation.messages
-        ) ||
+        !Array.isArray(conversation.messages) ||
         conversation.messages.length === 0
     ) {
 
-        if (DOM.welcomeScreen) {
-
-            DOM.welcomeScreen.hidden = false;
-
-        }
+        DOM.welcomeScreen.hidden = false;
 
         return;
 
     }
 
 
-    if (DOM.welcomeScreen) {
-
-        DOM.welcomeScreen.hidden = true;
-
-    }
+    DOM.welcomeScreen.hidden = true;
 
 
     conversation.messages.forEach(
@@ -772,12 +681,11 @@ function renderActiveConversation() {
 
 
     scrollMessagesToBottom(false);
-
 }
 
 
 /* =========================================================
-   12. MESSAGE RENDER
+   11. MESSAGE RENDER
 ========================================================= */
 
 function renderMessage(
@@ -785,49 +693,29 @@ function renderMessage(
     scroll = true
 ) {
 
-    if (!DOM.messageList) {
-
-        return null;
-
-    }
-
-
     const wrapper =
-        document.createElement(
-            "article"
-        );
-
+        document.createElement("article");
 
     wrapper.className =
         `message ${message.role}`;
 
 
     const inner =
-        document.createElement(
-            "div"
-        );
-
+        document.createElement("div");
 
     inner.className =
         "message-inner";
 
 
-    if (
-        message.role === "assistant"
-    ) {
+    if (message.role === "assistant") {
 
         const avatar =
-            document.createElement(
-                "div"
-            );
-
+            document.createElement("div");
 
         avatar.className =
             "assistant-avatar";
 
-
         avatar.textContent = "T";
-
 
         inner.appendChild(avatar);
 
@@ -835,41 +723,29 @@ function renderMessage(
 
 
     const content =
-        document.createElement(
-            "div"
-        );
-
+        document.createElement("div");
 
     content.className =
         "message-content";
 
 
     content.innerHTML =
-        formatMessage(
-            message.content
-        );
+        formatMessage(message.content);
 
 
     inner.appendChild(content);
 
 
-    if (
-        message.role === "user"
-    ) {
+    if (message.role === "user") {
 
         const avatar =
-            document.createElement(
-                "div"
-            );
-
+            document.createElement("div");
 
         avatar.className =
             "user-avatar-message";
 
-
         avatar.textContent =
             getUserInitial();
-
 
         inner.appendChild(avatar);
 
@@ -879,91 +755,67 @@ function renderMessage(
     wrapper.appendChild(inner);
 
 
-    if (
-        message.role === "assistant"
-    ) {
+    if (message.role === "assistant") {
 
         const actions =
-            document.createElement(
-                "div"
-            );
-
+            document.createElement("div");
 
         actions.className =
             "message-actions";
 
 
-        actions.appendChild(
+        const copyButton =
             createMessageAction(
                 "⧉",
                 "Salin",
-                () =>
+                () => {
+
                     copyText(
                         message.content
-                    )
-            )
-        );
+                    );
 
+                }
+            );
+
+
+        actions.appendChild(copyButton);
 
         wrapper.appendChild(actions);
 
     }
 
 
-    DOM.messageList.appendChild(
-        wrapper
-    );
+    DOM.messageList.appendChild(wrapper);
 
 
     if (scroll) {
-
         scrollMessagesToBottom(true);
-
     }
 
 
     return wrapper;
-
 }
 
 
 /* =========================================================
-   13. FORMAT MESSAGE
+   12. MESSAGE FORMATTER
 ========================================================= */
 
 function escapeHTML(text) {
 
     return String(text)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 
 function formatMessage(text) {
 
     if (!text) {
-
         return "";
-
     }
 
 
@@ -981,11 +833,7 @@ function formatMessage(text) {
             const index =
                 codeBlocks.length;
 
-
-            codeBlocks.push(
-                code.trim()
-            );
-
+            codeBlocks.push(code.trim());
 
             return `@@CODEBLOCK_${index}@@`;
 
@@ -1014,10 +862,13 @@ function formatMessage(text) {
     codeBlocks.forEach(
         (code, index) => {
 
+            const html =
+                `<pre><code>${code}</code></pre>`;
+
             safe =
                 safe.replace(
                     `@@CODEBLOCK_${index}@@`,
-                    `<pre><code>${code}</code></pre>`
+                    html
                 );
 
         }
@@ -1025,7 +876,6 @@ function formatMessage(text) {
 
 
     return safe;
-
 }
 
 
@@ -1036,58 +886,40 @@ function createMessageAction(
 ) {
 
     const button =
-        document.createElement(
-            "button"
-        );
-
+        document.createElement("button");
 
     button.type = "button";
 
     button.className =
         "message-action-button";
 
-
     button.title = label;
-
 
     button.setAttribute(
         "aria-label",
         label
     );
 
-
     button.textContent = icon;
 
-
-    on(
-        button,
+    button.addEventListener(
         "click",
         callback
     );
 
 
     return button;
-
 }
 
 
 /* =========================================================
-   14. SEND MESSAGE
+   13. SEND MESSAGE
 ========================================================= */
 
 async function handleSendMessage() {
 
     if (state.isGenerating) {
-
         return;
-
-    }
-
-
-    if (!DOM.messageInput) {
-
-        return;
-
     }
 
 
@@ -1096,9 +928,7 @@ async function handleSendMessage() {
 
 
     if (!text) {
-
         return;
-
     }
 
 
@@ -1112,7 +942,6 @@ async function handleSendMessage() {
         );
 
         return;
-
     }
 
 
@@ -1166,9 +995,7 @@ async function handleSendMessage() {
     ) {
 
         conversation.title =
-            createConversationTitle(
-                text
-            );
+            createConversationTitle(text);
 
     }
 
@@ -1181,12 +1008,7 @@ async function handleSendMessage() {
 
     clearAttachments();
 
-
-    if (DOM.welcomeScreen) {
-
-        DOM.welcomeScreen.hidden = true;
-
-    }
+    DOM.welcomeScreen.hidden = true;
 
 
     renderMessage(
@@ -1208,7 +1030,7 @@ async function handleSendMessage() {
 
 
 /* =========================================================
-   15. AI RESPONSE
+   14. AI RESPONSE
 ========================================================= */
 
 async function generateAssistantResponse(
@@ -1240,9 +1062,7 @@ async function generateAssistantResponse(
         );
 
 
-        if (
-            !state.generationStopped
-        ) {
+        if (!state.generationStopped) {
 
             let errorText =
                 "Maaf, terjadi kesalahan saat menghubungkan ke AI.";
@@ -1250,12 +1070,11 @@ async function generateAssistantResponse(
 
             if (
                 error &&
-                error.name ===
-                "AbortError"
+                error.name === "AbortError"
             ) {
 
                 errorText =
-                    "Permintaan AI melebihi batas waktu.";
+                    "Permintaan AI dihentikan atau melebihi batas waktu.";
 
             } else if (
                 error &&
@@ -1295,7 +1114,6 @@ async function generateAssistantResponse(
                 true
             );
 
-
             saveData();
 
         }
@@ -1320,21 +1138,12 @@ async function generateAssistantResponse(
 
 
 /* =========================================================
-   16. REAL API — RAILWAY
+   15. REAL API — RAILWAY
 ========================================================= */
 
 async function generateAPIResponse(
     conversation
 ) {
-
-    /*
-     * Endpoint final:
-     *
-     * /api/chat
-     *
-     * Browser akan otomatis memakai
-     * domain Railway tempat web ini berjalan.
-     */
 
     const endpoint =
         CONFIG.apiEndpoint;
@@ -1352,22 +1161,28 @@ async function generateAPIResponse(
     }
 
 
-    const messages =
-        conversation.messages.map(
-            message => ({
+    const lastUserMessage =
+        [...conversation.messages]
+            .reverse()
+            .find(
+                message =>
+                    message.role === "user"
+            );
 
-                role:
-                    message.role === "assistant"
-                        ? "assistant"
-                        : "user",
 
-                content:
-                    String(
-                        message.content || ""
-                    )
+    const message =
+        String(
+            lastUserMessage?.content || ""
+        ).trim();
 
-            })
+
+    if (!message) {
+
+        throw new Error(
+            "Pesan tidak ditemukan."
         );
+
+    }
 
 
     const controller =
@@ -1408,30 +1223,7 @@ async function generateAPIResponse(
                     body:
                         JSON.stringify({
 
-                            model:
-                                state.selectedModel,
-
-                            message:
-                                String(
-                                    conversation.messages[
-                                        conversation.messages.length - 1
-                                    ]?.content || ""
-                                ).trim(),
-
-                            messages,
-
-                            conversationId:
-                                conversation.id,
-
-                            user: {
-
-                                name:
-                                    state.settings.name,
-
-                                language:
-                                    state.settings.language
-
-                            }
+                            message
 
                         }),
 
@@ -1526,15 +1318,13 @@ async function generateAPIResponse(
 
 
 /* =========================================================
-   17. EXTRACT AI RESPONSE
+   16. EXTRACT AI RESPONSE
 ========================================================= */
 
 function extractAIAnswer(data) {
 
     if (!data) {
-
         return "";
-
     }
 
 
@@ -1608,68 +1398,48 @@ function extractAIAnswer(data) {
 
 
     return "";
-
 }
 
 
 /* =========================================================
-   18. GENERATION UI
+   17. GENERATION UI
 ========================================================= */
 
-function updateGeneratingUI(
-    isGenerating
-) {
+function updateGeneratingUI(isGenerating) {
 
-    if (DOM.generatingIndicator) {
+    DOM.generatingIndicator.hidden =
+        !isGenerating;
 
-        DOM.generatingIndicator.hidden =
-            !isGenerating;
+    DOM.sendButton.hidden =
+        isGenerating;
 
-    }
-
-
-    if (DOM.sendButton) {
-
-        DOM.sendButton.hidden =
-            isGenerating;
-
-    }
+    DOM.stopButton.hidden =
+        !isGenerating;
 
 
-    if (DOM.stopButton) {
-
-        DOM.stopButton.hidden =
-            !isGenerating;
-
-    }
+    DOM.messageInput.disabled =
+        isGenerating;
 
 
-    if (DOM.messageInput) {
+    DOM.attachButton.disabled =
+        isGenerating;
 
-        DOM.messageInput.disabled =
-            isGenerating;
 
+    DOM.voiceButton.disabled =
+        isGenerating;
+
+
+    if (isGenerating) {
 
         DOM.messageInput.placeholder =
-            isGenerating
-                ? "Tunggu jawaban selesai..."
-                : "Tulis pesan...";
+            "Tunggu jawaban selesai...";
 
-    }
+    } else {
 
+        DOM.messageInput.placeholder =
+            "Tulis pesan...";
 
-    if (DOM.attachButton) {
-
-        DOM.attachButton.disabled =
-            isGenerating;
-
-    }
-
-
-    if (DOM.voiceButton) {
-
-        DOM.voiceButton.disabled =
-            isGenerating;
+        DOM.messageInput.disabled = false;
 
     }
 
@@ -1677,15 +1447,13 @@ function updateGeneratingUI(
 
 
 /* =========================================================
-   19. STOP
+   18. STOP GENERATING
 ========================================================= */
 
 function stopGenerating() {
 
     if (!state.isGenerating) {
-
         return;
-
     }
 
 
@@ -1718,33 +1486,31 @@ function stopGenerating() {
 
 
 /* =========================================================
-   20. TEXTAREA
+   19. TEXTAREA
 ========================================================= */
 
 function updateCharacterCounter() {
-
-    if (!DOM.messageInput) {
-
-        return;
-
-    }
-
 
     const length =
         DOM.messageInput.value.length;
 
 
-    if (DOM.characterCounter) {
+    DOM.characterCounter.textContent =
+        `${length} / ${CONFIG.maxCharacters}`;
 
-        DOM.characterCounter.textContent =
-            `${length} / ${CONFIG.maxCharacters}`;
 
+    if (
+        length >
+        CONFIG.maxCharacters * 0.9
+    ) {
 
         DOM.characterCounter.style.color =
-            length >
-            CONFIG.maxCharacters * 0.9
-                ? "#ff8b91"
-                : "";
+            "#ff8b91";
+
+    } else {
+
+        DOM.characterCounter.style.color =
+            "";
 
     }
 
@@ -1753,18 +1519,12 @@ function updateCharacterCounter() {
 
 function autoResizeTextarea() {
 
-    if (!DOM.messageInput) {
-
-        return;
-
-    }
-
-
     const textarea =
         DOM.messageInput;
 
 
-    textarea.style.height = "auto";
+    textarea.style.height =
+        "auto";
 
 
     const newHeight =
@@ -1781,7 +1541,7 @@ function autoResizeTextarea() {
 
 
 /* =========================================================
-   21. KEYBOARD
+   20. KEYBOARD
 ========================================================= */
 
 function handleInputKeydown(event) {
@@ -1793,11 +1553,8 @@ function handleInputKeydown(event) {
 
         event.preventDefault();
 
-
         if (!state.isGenerating) {
-
             handleSendMessage();
-
         }
 
     }
@@ -1806,7 +1563,7 @@ function handleInputKeydown(event) {
 
 
 /* =========================================================
-   22. QUICK ACTIONS
+   21. QUICK ACTIONS
 ========================================================= */
 
 function handleQuickAction(event) {
@@ -1817,10 +1574,8 @@ function handleQuickAction(event) {
         );
 
 
-    if (!button || !DOM.messageInput) {
-
+    if (!button) {
         return;
-
     }
 
 
@@ -1829,9 +1584,7 @@ function handleQuickAction(event) {
 
 
     if (!prompt) {
-
         return;
-
     }
 
 
@@ -1849,7 +1602,7 @@ function handleQuickAction(event) {
 
 
 /* =========================================================
-   23. NEW CHAT
+   22. NEW CHAT
 ========================================================= */
 
 function startNewChat() {
@@ -1861,33 +1614,18 @@ function startNewChat() {
         );
 
         return;
-
     }
 
 
-    state.activeConversationId = null;
+    state.activeConversationId =
+        null;
 
 
-    if (DOM.messageList) {
+    DOM.messageList.innerHTML = "";
 
-        DOM.messageList.innerHTML = "";
+    DOM.welcomeScreen.hidden = false;
 
-    }
-
-
-    if (DOM.welcomeScreen) {
-
-        DOM.welcomeScreen.hidden = false;
-
-    }
-
-
-    if (DOM.messageInput) {
-
-        DOM.messageInput.value = "";
-
-    }
-
+    DOM.messageInput.value = "";
 
     updateCharacterCounter();
 
@@ -1899,76 +1637,44 @@ function startNewChat() {
 
     closeSidebar();
 
-
-    if (DOM.messageInput) {
-
-        DOM.messageInput.focus();
-
-    }
+    DOM.messageInput.focus();
 
 }
 
 
 /* =========================================================
-   24. SIDEBAR
+   23. SIDEBAR
 ========================================================= */
 
 function openSidebar() {
 
-    if (DOM.sidebar) {
+    DOM.sidebar.classList.add("open");
 
-        DOM.sidebar.classList.add(
-            "open"
-        );
-
-    }
-
-
-    if (DOM.sidebarOverlay) {
-
-        DOM.sidebarOverlay.classList.add(
-            "active"
-        );
-
-    }
+    DOM.sidebarOverlay.classList.add(
+        "active"
+    );
 
 }
 
 
 function closeSidebar() {
 
-    if (DOM.sidebar) {
+    DOM.sidebar.classList.remove(
+        "open"
+    );
 
-        DOM.sidebar.classList.remove(
-            "open"
-        );
-
-    }
-
-
-    if (DOM.sidebarOverlay) {
-
-        DOM.sidebarOverlay.classList.remove(
-            "active"
-        );
-
-    }
+    DOM.sidebarOverlay.classList.remove(
+        "active"
+    );
 
 }
 
 
 /* =========================================================
-   25. MODEL
+   24. MODEL MENU
 ========================================================= */
 
 function toggleModelMenu() {
-
-    if (!DOM.modelMenu) {
-
-        return;
-
-    }
-
 
     DOM.modelMenu.hidden =
         !DOM.modelMenu.hidden;
@@ -1978,11 +1684,7 @@ function toggleModelMenu() {
 
 function closeModelMenu() {
 
-    if (DOM.modelMenu) {
-
-        DOM.modelMenu.hidden = true;
-
-    }
+    DOM.modelMenu.hidden = true;
 
 }
 
@@ -1993,58 +1695,47 @@ function selectModel(model) {
         model || "default";
 
 
-    if (!DOM.modelMenu) {
-
-        return;
-
-    }
-
-
     const options =
         DOM.modelMenu.querySelectorAll(
             ".model-option"
         );
 
 
-    options.forEach(
-        option => {
+    options.forEach(option => {
 
-            const isSelected =
-                option.dataset.model ===
-                model;
+        const isSelected =
+            option.dataset.model === model;
 
 
-            option.classList.toggle(
-                "active",
-                isSelected
-            );
+        option.classList.toggle(
+            "active",
+            isSelected
+        );
 
 
-            option.setAttribute(
-                "aria-selected",
-                String(isSelected)
-            );
+        option.setAttribute(
+            "aria-selected",
+            String(isSelected)
+        );
 
-        }
-    );
+    });
 
 
-    if (DOM.selectedModel) {
+    if (model === "fast") {
 
         DOM.selectedModel.textContent =
-            model === "fast"
-                ? "TugasAI Fast"
-                : "TugasAI AI";
-
-    }
-
-
-    if (DOM.modelStatus) {
+            "TugasAI Fast";
 
         DOM.modelStatus.textContent =
-            model === "fast"
-                ? "Fast"
-                : "AI";
+            "Fast";
+
+    } else {
+
+        DOM.selectedModel.textContent =
+            "TugasAI AI";
+
+        DOM.modelStatus.textContent =
+            "AI";
 
     }
 
@@ -2055,17 +1746,10 @@ function selectModel(model) {
 
 
 /* =========================================================
-   26. SETTINGS
+   25. SETTINGS
 ========================================================= */
 
 function openSettings() {
-
-    if (!DOM.settingsModal) {
-
-        return;
-
-    }
-
 
     DOM.settingsModal.hidden = false;
 
@@ -2076,57 +1760,31 @@ function openSettings() {
 
 function closeSettings() {
 
-    if (DOM.settingsModal) {
-
-        DOM.settingsModal.hidden = true;
-
-    }
+    DOM.settingsModal.hidden = true;
 
 }
 
 
 function syncSettingsUI() {
 
-    if (DOM.themeSelect) {
+    DOM.themeSelect.value =
+        state.settings.theme;
 
-        DOM.themeSelect.value =
-            state.settings.theme;
+    DOM.languageSelect.value =
+        state.settings.language;
 
-    }
+    DOM.nameInput.value =
+        state.settings.name;
 
-
-    if (DOM.languageSelect) {
-
-        DOM.languageSelect.value =
-            state.settings.language;
-
-    }
-
-
-    if (DOM.nameInput) {
-
-        DOM.nameInput.value =
-            state.settings.name;
-
-    }
-
-
-    if (DOM.userName) {
-
-        DOM.userName.textContent =
-            state.settings.name ||
-            "Pengguna";
-
-    }
+    DOM.userName.textContent =
+        state.settings.name || "Pengguna";
 
 }
 
 
 function updateTheme(theme) {
 
-    state.settings.theme =
-        theme;
-
+    state.settings.theme = theme;
 
     applyTheme();
 
@@ -2171,12 +1829,8 @@ function updateName(name) {
         clean || "Pengguna";
 
 
-    if (DOM.userName) {
-
-        DOM.userName.textContent =
-            state.settings.name;
-
-    }
+    DOM.userName.textContent =
+        state.settings.name;
 
 
     saveSettings();
@@ -2190,7 +1844,7 @@ function updateName(name) {
 
 
 /* =========================================================
-   27. CLEAR HISTORY
+   26. CLEAR HISTORY
 ========================================================= */
 
 function askClearHistory() {
@@ -2204,26 +1858,17 @@ function askClearHistory() {
         );
 
         return;
-
     }
 
 
-    if (DOM.confirmModal) {
-
-        DOM.confirmModal.hidden = false;
-
-    }
+    DOM.confirmModal.hidden = false;
 
 }
 
 
 function closeConfirmModal() {
 
-    if (DOM.confirmModal) {
-
-        DOM.confirmModal.hidden = true;
-
-    }
+    DOM.confirmModal.hidden = true;
 
 }
 
@@ -2250,18 +1895,13 @@ function confirmClearHistory() {
 
 
 /* =========================================================
-   28. FILE ATTACHMENT
+   27. FILE ATTACHMENT
 ========================================================= */
 
 function openFilePicker() {
 
-    if (
-        state.isGenerating ||
-        !DOM.fileInput
-    ) {
-
+    if (state.isGenerating) {
         return;
-
     }
 
 
@@ -2279,18 +1919,19 @@ function handleFiles(event) {
 
 
     if (!files.length) {
-
         return;
-
     }
 
 
     const validFiles =
-        files.filter(
-            file =>
-                file.size <=
-                15 * 1024 * 1024
-        );
+        files.filter(file => {
+
+            const maxSize =
+                15 * 1024 * 1024;
+
+            return file.size <= maxSize;
+
+        });
 
 
     if (
@@ -2320,16 +1961,6 @@ function handleFiles(event) {
 
 function renderAttachments() {
 
-    if (
-        !DOM.attachmentList ||
-        !DOM.attachmentPreview
-    ) {
-
-        return;
-
-    }
-
-
     DOM.attachmentList.innerHTML = "";
 
 
@@ -2341,10 +1972,7 @@ function renderAttachments() {
         (file, index) => {
 
             const item =
-                document.createElement(
-                    "div"
-                );
-
+                document.createElement("div");
 
             item.className =
                 "attachment-item";
@@ -2357,10 +1985,7 @@ function renderAttachments() {
             ) {
 
                 const image =
-                    document.createElement(
-                        "img"
-                    );
-
+                    document.createElement("img");
 
                 image.alt =
                     file.name;
@@ -2401,26 +2026,28 @@ function renderAttachments() {
 
 
             const removeButton =
-                document.createElement(
-                    "button"
-                );
+                document.createElement("button");
 
+            removeButton.type =
+                "button";
 
-            removeButton.type = "button";
-
-            removeButton.textContent = "×";
-
+            removeButton.textContent =
+                "×";
 
             removeButton.style.position =
                 "absolute";
 
-            removeButton.style.right = "4px";
+            removeButton.style.right =
+                "4px";
 
-            removeButton.style.top = "4px";
+            removeButton.style.top =
+                "4px";
 
-            removeButton.style.width = "20px";
+            removeButton.style.width =
+                "20px";
 
-            removeButton.style.height = "20px";
+            removeButton.style.height =
+                "20px";
 
             removeButton.style.borderRadius =
                 "50%";
@@ -2432,8 +2059,7 @@ function renderAttachments() {
                 "#fff";
 
 
-            on(
-                removeButton,
+            removeButton.addEventListener(
                 "click",
                 () => {
 
@@ -2467,13 +2093,7 @@ function clearAttachments() {
 
     state.pendingFiles = [];
 
-
-    if (DOM.fileInput) {
-
-        DOM.fileInput.value = "";
-
-    }
-
+    DOM.fileInput.value = "";
 
     renderAttachments();
 
@@ -2481,7 +2101,7 @@ function clearAttachments() {
 
 
 /* =========================================================
-   29. VOICE INPUT
+   28. VOICE INPUT
 ========================================================= */
 
 function startVoiceInput() {
@@ -2498,17 +2118,11 @@ function startVoiceInput() {
         );
 
         return;
-
     }
 
 
-    if (
-        state.isGenerating ||
-        !DOM.messageInput
-    ) {
-
+    if (state.isGenerating) {
         return;
-
     }
 
 
@@ -2527,18 +2141,16 @@ function startVoiceInput() {
     recognition.continuous = false;
 
 
+    let finalText = "";
+
+
     recognition.onstart = () => {
 
-        if (DOM.voiceButton) {
+        DOM.voiceButton.style.background =
+            "var(--accent-soft)";
 
-            DOM.voiceButton.style.background =
-                "var(--accent-soft)";
-
-            DOM.voiceButton.style.color =
-                "var(--accent-hover)";
-
-        }
-
+        DOM.voiceButton.style.color =
+            "var(--accent-hover)";
 
         showToast(
             "Silakan berbicara..."
@@ -2552,7 +2164,6 @@ function startVoiceInput() {
 
             let transcript = "";
 
-
             for (
                 let i = event.resultIndex;
                 i < event.results.length;
@@ -2565,9 +2176,11 @@ function startVoiceInput() {
             }
 
 
-            DOM.messageInput.value =
-                transcript;
+            finalText = transcript;
 
+
+            DOM.messageInput.value =
+                finalText;
 
             updateCharacterCounter();
 
@@ -2584,7 +2197,6 @@ function startVoiceInput() {
                 error
             );
 
-
             showToast(
                 "Input suara tidak dapat digunakan."
             );
@@ -2594,37 +2206,22 @@ function startVoiceInput() {
 
     recognition.onend = () => {
 
-        if (DOM.voiceButton) {
+        DOM.voiceButton.style.background =
+            "";
 
-            DOM.voiceButton.style.background =
-                "";
-
-            DOM.voiceButton.style.color =
-                "";
-
-        }
+        DOM.voiceButton.style.color =
+            "";
 
     };
 
 
-    try {
-
-        recognition.start();
-
-    } catch (error) {
-
-        console.warn(
-            "Voice start:",
-            error
-        );
-
-    }
+    recognition.start();
 
 }
 
 
 /* =========================================================
-   30. COPY
+   29. COPY
 ========================================================= */
 
 async function copyText(text) {
@@ -2643,27 +2240,25 @@ async function copyText(text) {
         } else {
 
             const textarea =
-                document.createElement(
-                    "textarea"
-                );
-
+                document.createElement("textarea");
 
             textarea.value = text;
 
             textarea.style.position =
                 "fixed";
 
-            textarea.style.opacity = "0";
-
+            textarea.style.opacity =
+                "0";
 
             document.body.appendChild(
                 textarea
             );
 
-
             textarea.select();
 
-            document.execCommand("copy");
+            document.execCommand(
+                "copy"
+            );
 
             textarea.remove();
 
@@ -2674,4 +2269,769 @@ async function copyText(text) {
             "Jawaban disalin."
         );
 
+    } catch (error) {
+
+        console.error(
+            "Copy error:",
+            error
+        );
+
+        showToast(
+            "Gagal menyalin."
+        );
+
     }
+
+}
+
+
+/* =========================================================
+   30. SHARE
+========================================================= */
+
+async function shareConversation() {
+
+    const conversation =
+        getActiveConversation();
+
+
+    if (!conversation) {
+
+        showToast(
+            "Belum ada percakapan untuk dibagikan."
+        );
+
+        return;
+    }
+
+
+    const text =
+        conversation.messages
+            .map(message => {
+
+                const label =
+                    message.role === "user"
+                        ? "Pengguna"
+                        : "TugasAI";
+
+                return (
+                    `${label}:\n${message.content}`
+                );
+
+            })
+            .join("\n\n");
+
+
+    if (
+        navigator.share
+    ) {
+
+        try {
+
+            await navigator.share({
+
+                title:
+                    conversation.title,
+
+                text
+
+            });
+
+        } catch (error) {
+
+            if (
+                error.name !==
+                "AbortError"
+            ) {
+
+                console.warn(
+                    "Share error:",
+                    error
+                );
+
+            }
+
+        }
+
+        return;
+    }
+
+
+    await copyText(text);
+
+    showToast(
+        "Percakapan disalin karena fitur berbagi tidak tersedia."
+    );
+
+}
+
+
+/* =========================================================
+   31. CONTEXT MENU
+========================================================= */
+
+function showContextMenu(
+    x,
+    y,
+    conversationId
+) {
+
+    state.contextConversationId =
+        conversationId;
+
+
+    const menu =
+        DOM.contextMenu;
+
+
+    menu.hidden = false;
+
+
+    const width =
+        menu.offsetWidth;
+
+    const height =
+        menu.offsetHeight;
+
+
+    const safeX =
+        Math.min(
+            x,
+            window.innerWidth - width - 8
+        );
+
+
+    const safeY =
+        Math.min(
+            y,
+            window.innerHeight - height - 8
+        );
+
+
+    menu.style.left =
+        `${Math.max(8, safeX)}px`;
+
+    menu.style.top =
+        `${Math.max(8, safeY)}px`;
+
+}
+
+
+function hideContextMenu() {
+
+    DOM.contextMenu.hidden = true;
+
+    state.contextConversationId =
+        null;
+
+}
+
+
+function handleContextAction(
+    action
+) {
+
+    const id =
+        state.contextConversationId;
+
+
+    if (!id) {
+        return;
+    }
+
+
+    if (action === "rename") {
+
+        renameConversation(id);
+
+    }
+
+
+    if (action === "share") {
+
+        state.activeConversationId =
+            id;
+
+        shareConversation();
+
+    }
+
+
+    if (action === "delete") {
+
+        deleteConversation(id);
+
+        showToast(
+            "Percakapan dihapus."
+        );
+
+    }
+
+
+    hideContextMenu();
+
+}
+
+
+/* =========================================================
+   32. TOAST
+========================================================= */
+
+function showToast(message) {
+
+    const toast =
+        document.createElement("div");
+
+    toast.className =
+        "toast";
+
+    toast.textContent =
+        message;
+
+
+    DOM.toastContainer.appendChild(
+        toast
+    );
+
+
+    window.setTimeout(
+        () => {
+
+            toast.style.opacity =
+                "0";
+
+            toast.style.transform =
+                "translateY(7px)";
+
+
+            window.setTimeout(
+                () => {
+
+                    toast.remove();
+
+                },
+                180
+            );
+
+        },
+        2300
+    );
+
+}
+
+
+/* =========================================================
+   33. SCROLL
+========================================================= */
+
+function scrollMessagesToBottom(
+    smooth = true
+) {
+
+    if (!DOM.messageList) {
+        return;
+    }
+
+
+    DOM.messageList.scrollTo({
+
+        top:
+            DOM.messageList.scrollHeight,
+
+        behavior:
+            smooth
+                ? "smooth"
+                : "auto"
+
+    });
+
+}
+
+
+/* =========================================================
+   34. USER
+========================================================= */
+
+function getUserInitial() {
+
+    const name =
+        state.settings.name ||
+        "Pengguna";
+
+
+    return name
+        .trim()
+        .charAt(0)
+        .toUpperCase();
+
+}
+
+
+/* =========================================================
+   35. UTILITY
+========================================================= */
+
+function wait(ms) {
+
+    return new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                ms
+            )
+    );
+
+}
+
+
+/* =========================================================
+   36. EVENT LISTENERS
+========================================================= */
+
+function bindEvents() {
+
+    DOM.newChatButton.addEventListener(
+        "click",
+        startNewChat
+    );
+
+
+    DOM.openSidebarButton.addEventListener(
+        "click",
+        openSidebar
+    );
+
+
+    DOM.closeSidebarButton.addEventListener(
+        "click",
+        closeSidebar
+    );
+
+
+    DOM.sidebarOverlay.addEventListener(
+        "click",
+        closeSidebar
+    );
+
+
+    DOM.conversationSearch.addEventListener(
+        "input",
+        event => {
+
+            renderConversationList(
+                event.target.value
+            );
+
+        }
+    );
+
+
+    DOM.settingsButton.addEventListener(
+        "click",
+        openSettings
+    );
+
+
+    DOM.themeButton.addEventListener(
+        "click",
+        () => {
+
+            const current =
+                state.settings.theme;
+
+
+            const next =
+                current === "dark"
+                    ? "light"
+                    : current === "light"
+                        ? "system"
+                        : "dark";
+
+
+            updateTheme(next);
+
+            syncSettingsUI();
+
+        }
+    );
+
+
+    DOM.themeSelect.addEventListener(
+        "change",
+        event => {
+
+            updateTheme(
+                event.target.value
+            );
+
+        }
+    );
+
+
+    DOM.languageSelect.addEventListener(
+        "change",
+        event => {
+
+            state.settings.language =
+                event.target.value;
+
+            saveSettings();
+
+        }
+    );
+
+
+    DOM.nameInput.addEventListener(
+        "change",
+        event => {
+
+            updateName(
+                event.target.value
+            );
+
+        }
+    );
+
+
+    document.querySelectorAll(
+        "[data-close-modal]"
+    ).forEach(element => {
+
+        element.addEventListener(
+            "click",
+            closeSettings
+        );
+
+    });
+
+
+    document.querySelectorAll(
+        "[data-close-confirm]"
+    ).forEach(element => {
+
+        element.addEventListener(
+            "click",
+            closeConfirmModal
+        );
+
+    });
+
+
+    DOM.clearHistoryButton.addEventListener(
+        "click",
+        askClearHistory
+    );
+
+
+    DOM.cancelConfirmButton.addEventListener(
+        "click",
+        closeConfirmModal
+    );
+
+
+    DOM.confirmActionButton.addEventListener(
+        "click",
+        confirmClearHistory
+    );
+
+
+    DOM.messageInput.addEventListener(
+        "input",
+        () => {
+
+            updateCharacterCounter();
+
+            autoResizeTextarea();
+
+        }
+    );
+
+
+    DOM.messageInput.addEventListener(
+        "keydown",
+        handleInputKeydown
+    );
+
+
+    DOM.messageForm.addEventListener(
+        "submit",
+        event => {
+
+            event.preventDefault();
+
+            handleSendMessage();
+
+        }
+    );
+
+
+    DOM.quickActions.addEventListener(
+        "click",
+        handleQuickAction
+    );
+
+
+    DOM.stopButton.addEventListener(
+        "click",
+        stopGenerating
+    );
+
+
+    DOM.modelSelectorButton.addEventListener(
+        "click",
+        event => {
+
+            event.stopPropagation();
+
+            toggleModelMenu();
+
+        }
+    );
+
+
+    DOM.modelMenu
+        .querySelectorAll(
+            ".model-option"
+        )
+        .forEach(option => {
+
+            option.addEventListener(
+                "click",
+                () => {
+
+                    selectModel(
+                        option.dataset.model
+                    );
+
+                }
+            );
+
+        });
+
+
+    DOM.attachButton.addEventListener(
+        "click",
+        openFilePicker
+    );
+
+
+    DOM.fileInput.addEventListener(
+        "change",
+        handleFiles
+    );
+
+
+    DOM.voiceButton.addEventListener(
+        "click",
+        startVoiceInput
+    );
+
+
+    DOM.shareButton.addEventListener(
+        "click",
+        shareConversation
+    );
+
+
+    DOM.profileMenuButton.addEventListener(
+        "click",
+        openSettings
+    );
+
+
+    DOM.contextMenu
+        .querySelectorAll(
+            "[data-context-action]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    handleContextAction(
+                        button.dataset.contextAction
+                    );
+
+                }
+            );
+
+        });
+
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            if (
+                !DOM.modelMenu.hidden &&
+                !DOM.modelMenu.contains(event.target) &&
+                !DOM.modelSelectorButton.contains(event.target)
+            ) {
+
+                closeModelMenu();
+
+            }
+
+
+            if (
+                !DOM.contextMenu.hidden &&
+                !DOM.contextMenu.contains(event.target)
+            ) {
+
+                hideContextMenu();
+
+            }
+
+        }
+    );
+
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key !== "Escape"
+            ) {
+                return;
+            }
+
+
+            closeModelMenu();
+
+            hideContextMenu();
+
+            closeSettings();
+
+            closeConfirmModal();
+
+            closeSidebar();
+
+        }
+    );
+
+
+    window.addEventListener(
+        "resize",
+        () => {
+
+            autoResizeTextarea();
+
+            if (
+                window.innerWidth > 700
+            ) {
+
+                closeSidebar();
+
+            }
+
+        }
+    );
+
+
+    const mediaQuery =
+        window.matchMedia(
+            "(prefers-color-scheme: light)"
+        );
+
+
+    if (
+        typeof mediaQuery.addEventListener ===
+        "function"
+    ) {
+
+        mediaQuery.addEventListener(
+            "change",
+            () => {
+
+                if (
+                    state.settings.theme ===
+                    "system"
+                ) {
+
+                    applyTheme();
+
+                }
+
+            }
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   37. INITIAL UI
+========================================================= */
+
+function initializeUI() {
+
+    syncSettingsUI();
+
+    applyTheme();
+
+    updateCharacterCounter();
+
+    autoResizeTextarea();
+
+    renderConversationList();
+
+    renderActiveConversation();
+
+    renderAttachments();
+
+}
+
+
+/* =========================================================
+   38. APPLICATION START
+========================================================= */
+
+function initializeApp() {
+
+    cacheDOM();
+
+    loadData();
+
+    bindEvents();
+
+    initializeUI();
+
+
+    if (
+        !state.activeConversationId
+    ) {
+
+        DOM.welcomeScreen.hidden =
+            false;
+
+    }
+
+
+    console.log(
+        `${CONFIG.appName} berhasil dimuat.`
+    );
+
+}
+
+
+/* =========================================================
+   39. START
+========================================================= */
+
+if (
+    document.readyState === "loading"
+) {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeApp
+    );
+
+} else {
+
+    initializeApp();
+
+}
