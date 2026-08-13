@@ -17,11 +17,7 @@ const CONFIG = {
 
     model:
         process.env.OPENROUTER_MODEL ||
-        "openai/gpt-5.6",
-
-    appUrl:
-        process.env.APP_URL ||
-        "https://tugasai-production.up.railway.app"
+        "openai/gpt-5.6"
 };
 
 const ROOT_DIR = __dirname;
@@ -144,13 +140,10 @@ async function askOpenRouter(message) {
     const apiKey =
         process.env.OPENROUTER_API_KEY;
 
-    if (
-        typeof apiKey !== "string" ||
-        !apiKey.trim()
-    ) {
+    if (!apiKey) {
 
         throw new Error(
-            "OPENROUTER_API_KEY belum tersedia di Railway Variables."
+            "OPENROUTER_API_KEY belum dipasang di Render."
         );
     }
 
@@ -165,13 +158,13 @@ async function askOpenRouter(message) {
                 headers: {
 
                     "Authorization":
-                        `Bearer ${apiKey.trim()}`,
+                        `Bearer ${apiKey}`,
 
                     "Content-Type":
                         "application/json",
 
                     "HTTP-Referer":
-                        CONFIG.appUrl,
+                        "https://tugasai.onrender.com",
 
                     "X-Title":
                         "TugasAI"
@@ -336,3 +329,304 @@ async function handleChat(req, res) {
 
             }
         );
+
+
+    } catch (error) {
+
+        console.error(
+            "CHAT ERROR:",
+            error
+        );
+
+
+        sendJSON(
+            res,
+            500,
+            {
+
+                ok: false,
+
+                error:
+                    error.message ||
+                    "Terjadi kesalahan pada server."
+
+            }
+        );
+    }
+}
+
+
+/* =====================================================
+   STATIC FILES
+===================================================== */
+
+function serveStatic(req, res) {
+
+    let requestedPath;
+
+    try {
+
+        requestedPath =
+            decodeURIComponent(
+                new URL(
+                    req.url,
+                    `http://${req.headers.host || "localhost"}`
+                ).pathname
+            );
+
+    } catch {
+
+        sendJSON(
+            res,
+            400,
+            {
+                ok: false,
+                error: "URL tidak valid."
+            }
+        );
+
+        return;
+    }
+
+
+    if (
+        requestedPath === "/"
+    ) {
+
+        requestedPath =
+            "/index.html";
+    }
+
+
+    const safePath =
+        path.normalize(
+            requestedPath
+        );
+
+
+    const filePath =
+        path.join(
+            ROOT_DIR,
+            safePath
+        );
+
+
+    if (
+        !filePath.startsWith(
+            ROOT_DIR
+        )
+    ) {
+
+        sendJSON(
+            res,
+            403,
+            {
+                ok: false,
+                error: "Forbidden"
+            }
+        );
+
+        return;
+    }
+
+
+    fs.stat(
+        filePath,
+        (error, stats) => {
+
+            if (
+                error ||
+                !stats.isFile()
+            ) {
+
+                sendJSON(
+                    res,
+                    404,
+                    {
+                        ok: false,
+                        error:
+                            "File tidak ditemukan."
+                    }
+                );
+
+                return;
+            }
+
+
+            const extension =
+                path.extname(
+                    filePath
+                ).toLowerCase();
+
+
+            const mime =
+                MIME_TYPES[extension] ||
+                "application/octet-stream";
+
+
+            res.statusCode = 200;
+
+            res.setHeader(
+                "Content-Type",
+                mime
+            );
+
+
+            fs.createReadStream(
+                filePath
+            ).pipe(res);
+        }
+    );
+}
+
+
+/* =====================================================
+   SERVER
+===================================================== */
+
+const server =
+    http.createServer(
+        async (req, res) => {
+
+            if (
+                req.method === "OPTIONS"
+            ) {
+
+                res.statusCode = 204;
+
+                res.end();
+
+                return;
+            }
+
+
+            const url =
+                new URL(
+                    req.url,
+                    `http://${req.headers.host || "localhost"}`
+                );
+
+
+            const pathname =
+                url.pathname;
+
+
+            if (
+                req.method === "GET" &&
+                pathname === "/api/health"
+            ) {
+
+                sendJSON(
+                    res,
+                    200,
+                    {
+
+                        ok: true,
+
+                        app:
+                            CONFIG.appName,
+
+                        version:
+                            CONFIG.version,
+
+                        status:
+                            "online",
+
+                        ai:
+                            Boolean(
+                                process.env.OPENROUTER_API_KEY
+                            )
+
+                    }
+                );
+
+                return;
+            }
+
+
+            if (
+                req.method === "POST" &&
+                pathname === "/api/chat"
+            ) {
+
+                await handleChat(
+                    req,
+                    res
+                );
+
+                return;
+            }
+
+
+            if (
+                req.method === "GET" &&
+                pathname === "/api"
+            ) {
+
+                sendJSON(
+                    res,
+                    200,
+                    {
+
+                        ok: true,
+
+                        app:
+                            CONFIG.appName,
+
+                        endpoints: {
+
+                            health:
+                                "GET /api/health",
+
+                            chat:
+                                "POST /api/chat"
+
+                        }
+
+                    }
+                );
+
+                return;
+            }
+
+
+            if (
+                req.method === "GET"
+            ) {
+
+                serveStatic(
+                    req,
+                    res
+                );
+
+                return;
+            }
+
+
+            sendJSON(
+                res,
+                405,
+                {
+
+                    ok: false,
+
+                    error:
+                        "Method tidak diizinkan."
+
+                }
+            );
+        }
+    );
+
+
+server.listen(
+    CONFIG.port,
+    CONFIG.host,
+    () => {
+
+        console.log(
+            `${CONFIG.appName} berjalan di port ${CONFIG.port}`
+        );
+
+    }
+);
